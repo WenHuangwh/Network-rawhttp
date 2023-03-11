@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+import socket
+import sys
+import os
+from urllib.parse import urlparse
+
+def main():
+    print("Welcome to rawhttpget program")
+    # Parse command line arguments
+    if len(sys.argv) != 2:
+        print("Usage: ./rawhttpget [URL]")
+        sys.exit()
+
+    url = sys.argv[1]
+
+    # Split URL into host and path components
+    parsed_url = urlparse(url)
+    hostname = parsed_url.hostname
+    path = parsed_url.path
+    filename = url.split("/")[-1]
+    if not filename:
+        path = "index.html"
+    
+    # Create socket and connect to server
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((hostname, 80))
+
+    # Send GET request to server
+    request = f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\n\r\n"
+    s.sendall(request.encode())
+
+    print(request)
+
+    # Receive response from server
+    response = b""
+    while True:
+        data = s.recv(1024)
+        if not data:
+            break
+        response += data
+
+    print(response)
+    # Write response to file
+    with open(filename, "wb") as f:
+        f.write(response)
+
+    print("File downloaded successfully!")
+
+if __name__ == "__main__":
+    main()
