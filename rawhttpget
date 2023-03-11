@@ -29,8 +29,6 @@ def main():
     request = f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\n\r\n"
     s.sendall(request.encode())
 
-    print(request)
-
     # Receive response from server
     response = b""
     while True:
