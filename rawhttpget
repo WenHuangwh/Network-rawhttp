@@ -66,6 +66,10 @@ def main():
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
     sendSocket.send(PSH_ACK, request)
     receiveSocket.receive()
+    sendSocket.send(PSH_ACK, request)
+    receiveSocket.receive()
+    sendSocket.send(FIN, "")
+    sendSocket.send(FIN_ACK, "")
 
 if __name__ == "__main__":
     main()
