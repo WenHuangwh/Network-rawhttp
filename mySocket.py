@@ -174,8 +174,8 @@ class ReceiveSocket:
 
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
-        ip_datagram = self.unpack_ip_header(received_pkt)
-        tcp_datagram = self.unpack_tcp_header(received_pkt)
+        ip_datagram = self.unpack_ip_header(packet)
+        tcp_datagram = self.unpack_tcp_header(packet)
         if ip_datagram.src_address != self._srcIpAddr or ip_datagram.dest_address != self._destIpAddr:
             print("Invalid ip address")
             return False
