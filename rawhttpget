@@ -1,48 +1,67 @@
 #!/usr/bin/env python3
-import socket
-import sys
+import socket, sys, time
 import os
 from urllib.parse import urlparse
+from struct import *
+from random import randint
+import time
+from collections import namedtuple
+from mySocket import SendSocket, ReceiveSocket
+
+SYN = 0x02   # 0b00000010
+ACK = 0x10   # 0b00010000
+SYN_ACK = 0x12   # 0b00010010
+FIN = 0x01   # 0b00000001
+FIN_ACK = 0x11   # 0b00010001
+PSH_ACK = 0x18   # 0b00011000
+
+# Success built connection
+def getMyIpAddr(dest_ip_addr, dest_port):
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    s.connect((dest_ip_addr, dest_port))
+    my_ip_addr = s.getsockname()[0]
+    s.close()
+    return my_ip_addr
+
+def handshake(sendSocket, receiveSocket, timeout=60):
+    cur_time = time.time()
+    while time.time() - cur_time <= timeout:
+        # Send SYN
+        sendSocket.send(SYN, "")
+        tcp_datagram = receiveSocket.receive()
+        if tcp_datagram != None and tcp_datagram.flags == SYN_ACK:
+            sendSocket.send(ACK, "")
+            print("Connected")
+            return True
+        else:
+            continue
+    print("Receive time expired")
+    return False
 
 def main():
     print("Welcome to rawhttpget program")
-    # Parse command line arguments
-    if len(sys.argv) != 2:
-        print("Usage: ./rawhttpget [URL]")
-        sys.exit()
-
     url = sys.argv[1]
 
     # Split URL into host and path components
     parsed_url = urlparse(url)
-    hostname = parsed_url.hostname
-    path = parsed_url.path
     filename = url.split("/")[-1]
     if not filename:
         path = "index.html"
-    
-    # Create socket and connect to server
-    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    s.connect((hostname, 80))
 
-    # Send GET request to server
-    request = f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\n\r\n"
-    s.sendall(request.encode())
+    dest_hostname = parsed_url.hostname
+    dest_ip_addr = socket.gethostbyname(dest_hostname)
+    src_port = randint(49152, 65535)
+    dest_port = 80
+    src_ip_addr = getMyIpAddr(dest_ip_addr, dest_port)
 
-    # Receive response from server
-    response = b""
-    while True:
-        data = s.recv(1024)
-        if not data:
-            break
-        response += data
+    # handshake
+    sendSocket = SendSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
+    receiveSocket = ReceiveSocket(dest_ip_addr, src_ip_addr, dest_port, src_port)
+    connection = handshake(sendSocket, receiveSocket)
+    if not connection:
+        sys.exit(1)
 
-    print(response)
-    # Write response to file
-    with open(filename, "wb") as f:
-        f.write(response)
-
-    print("File downloaded successfully!")
+    request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
 
 if __name__ == "__main__":
     main()
