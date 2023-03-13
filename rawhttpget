@@ -40,10 +40,10 @@ def handshake(sendSocket, receiveSocket, timeout=60):
     print("Receive time expired")
     return False
 
-def tearDown(sendSocket, receiveSocket):
+def tearDown(sendSocket, receiveSocket, timeout=60):
     cur_time = time.time()
     while time.time() - cur_time <= timeout:
-        # Send SYN
+        # Send FIN
         sendSocket.send(FIN, "")
         tcp_datagram = receiveSocket.receive()
         if tcp_datagram != None and tcp_datagram.flags == ACK:
