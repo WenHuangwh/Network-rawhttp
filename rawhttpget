@@ -62,7 +62,7 @@ def main():
         sys.exit(1)
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
-wire    sendSocket.send(PSH_ACK, request)
+    sendSocket.send(PSH_ACK, request)
 
 if __name__ == "__main__":
     main()
