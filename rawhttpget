@@ -40,6 +40,22 @@ def handshake(sendSocket, receiveSocket, timeout=60):
     print("Receive time expired")
     return False
 
+def tearDown(sendSocket, receiveSocket):
+    cur_time = time.time()
+    while time.time() - cur_time <= timeout:
+        # Send SYN
+        sendSocket.send(FIN, "")
+        tcp_datagram = receiveSocket.receive()
+        if tcp_datagram != None and tcp_datagram.flags == ACK:
+            sendSocket.send(FIN_ACK, "")
+            tcp_datagram = receiveSocket.receive()
+            print(tcp_datagram)
+            print("Connected")
+            return True
+        else:
+            continue
+    print("Receive time expired")
+    return False
 def main():
     print("Welcome to rawhttpget program")
     url = sys.argv[1]
@@ -70,6 +86,8 @@ def main():
     # # receiveSocket.receive()
     # sendSocket.send(FIN, "")
     # sendSocket.send(FIN_ACK, "")
+
+    tearDown(sendSocket, receiveSocket)
 
 if __name__ == "__main__":
     main()
