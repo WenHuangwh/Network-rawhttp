@@ -62,7 +62,8 @@ def main():
         sys.exit(1)
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
-    sendSocket.send(ACK, request.encode())
+    print(type(request))
+    sendSocket.send(ACK, request)
 
 if __name__ == "__main__":
     main()
