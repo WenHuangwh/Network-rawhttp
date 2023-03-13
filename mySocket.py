@@ -121,6 +121,8 @@ class SendSocket:
 
     def send(self, flags, data):
         data = data.encode()
+        if len(data) % 2 == 1:
+            data += b'\x00'
         ip_header = self.ip_header()
         tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
