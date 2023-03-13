@@ -32,7 +32,6 @@ def handshake(sendSocket, receiveSocket, timeout=60):
         if tcp_datagram != None and tcp_datagram.flags == SYN_ACK:
             sendSocket.send(ACK, "")
             tcp_datagram = receiveSocket.receive()
-            print(tcp_datagram)
             print("Connected")
             return True
         else:
@@ -65,6 +64,7 @@ def main():
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
     sendSocket.send(PSH_ACK, request)
+    receiveSocket.receive()
 
 if __name__ == "__main__":
     main()
