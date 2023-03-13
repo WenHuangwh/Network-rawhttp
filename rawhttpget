@@ -28,10 +28,14 @@ def handshake(sendSocket, receiveSocket, timeout=60):
     while time.time() - cur_time <= timeout:
         # Send SYN
         sendSocket.send(SYN, "")
+        print("1:")
+        print(tcp_datagram)
         tcp_datagram = receiveSocket.receive()
         if tcp_datagram != None and tcp_datagram.flags == SYN_ACK:
             sendSocket.send(ACK, "")
             tcp_datagram = receiveSocket.receive()
+            print("2:")
+            print(tcp_datagram)
             print("Connected")
             return True
         else:
@@ -42,10 +46,12 @@ def handshake(sendSocket, receiveSocket, timeout=60):
 def tearDown(sendSocket, receiveSocket, timeout=60):
     sendSocket.send(FIN, "")
     tcp_datagram = receiveSocket.receive()
+    print("3:")
     print(tcp_datagram)
     if tcp_datagram != None and tcp_datagram.flags == ACK:
         sendSocket.send(ACK, "")
         tcp_datagram = receiveSocket.receive()
+        print("4:")
         print(tcp_datagram)
         print("Connected")
         return True
