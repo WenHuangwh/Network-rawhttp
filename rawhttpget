@@ -41,21 +41,18 @@ def handshake(sendSocket, receiveSocket, timeout=60):
     return False
 
 def tearDown(sendSocket, receiveSocket, timeout=60):
-    cur_time = time.time()
-    while time.time() - cur_time <= timeout:
-        # Send FIN
-        sendSocket.send(FIN, "")
+    sendSocket.send(FIN, "")
+    tcp_datagram = receiveSocket.receive()
+    print(tcp_datagram)
+    if tcp_datagram != None and tcp_datagram.flags == ACK:
+        sendSocket.send(ACK, "")
         tcp_datagram = receiveSocket.receive()
-        if tcp_datagram != None and tcp_datagram.flags == ACK:
-            sendSocket.send(FIN_ACK, "")
-            tcp_datagram = receiveSocket.receive()
-            print(tcp_datagram)
-            print("Connected")
-            return True
-        else:
-            continue
-    print("Receive time expired")
-    return False
+        print(tcp_datagram)
+        print("Connected")
+        return True
+    else:
+        return False
+
 def main():
     print("Welcome to rawhttpget program")
     url = sys.argv[1]
@@ -75,19 +72,23 @@ def main():
     # handshake
     sendSocket = SendSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     receiveSocket = ReceiveSocket(dest_ip_addr, src_ip_addr, dest_port, src_port)
+
     connection = handshake(sendSocket, receiveSocket)
+    tearDown(sendSocket, receiveSocket)
+
+
     if not connection:
         sys.exit(1)
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
-    # sendSocket.send(PSH_ACK, request)
+    sendSocket.send(PSH_ACK, request)
     # receiveSocket.receive()
     # sendSocket.send(PSH_ACK, request)
     # # receiveSocket.receive()
     # sendSocket.send(FIN, "")
     # sendSocket.send(FIN_ACK, "")
 
-    tearDown(sendSocket, receiveSocket)
+    
 
 if __name__ == "__main__":
     main()
