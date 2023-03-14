@@ -148,8 +148,6 @@ class RawSocket:
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
                     self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
-                    print(f"payload: {tcp_datagram.payload.hex()}")
-                    self._send_one(ACK)
                     break
                 else:
                     print("Unexpected packet received. Waiting for ACK...")
@@ -181,6 +179,51 @@ class RawSocket:
                 tcp_datagram = self.unpack_tcp_header(received_pkt)
                 return tcp_datagram
         return None
+
+    def receive_all(self):
+        received_data = []
+
+        while True:
+            # Receive a packet
+            tcp_datagram = self._receive_one()
+
+            # If no packet is received, continue waiting
+            if tcp_datagram is None:
+                continue
+
+            # Check if the received packet is an ACK with payload
+            if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
+                # Update sequence and acknowledgement numbers
+                self._seq = tcp_datagram.ack_seq + len(tcp_datagram.payload)
+                self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+
+                # Send ACK to the server
+                self._send_one(ACK)
+
+                # Append the payload to the received_data list
+                received_data.append(tcp_datagram.payload)
+
+                # Check if the received packet has the FIN flag set
+                if tcp_datagram.flags & FIN:
+                    # Send ACK for the FIN flag
+                    self._ack_seq += 1
+                    self._send_one(ACK)
+                    break
+            else:
+                print("Unexpected packet received. Waiting for data...")
+
+        # Combine received payloads
+        total_payload = b''.join(received_data)
+
+        # Decode payload to a string, assuming UTF-8 encoding
+        try:
+            payload_string = total_payload.decode('utf-8')
+        except UnicodeDecodeError:
+            print("Unable to decode payload using UTF-8 encoding.")
+            payload_string = None
+
+        return payload_string
+
 
     def unpack_ip_header(self, packet):
         IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
