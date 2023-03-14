@@ -186,10 +186,13 @@ class RawSocket:
         while True:
             # Receive a packet
             tcp_datagram = self._receive_one()
+            
 
             # If no packet is received, continue waiting
             if tcp_datagram is None:
                 continue
+
+            print(tcp_datagram)
 
             # Check if the received packet is an ACK with payload
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
