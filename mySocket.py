@@ -137,6 +137,7 @@ class RawSocket:
         for segment in segments:
             # Send the data segment
             self._send_one(PSH_ACK, segment)
+            self._seq += 1
             self._seq += len(segment)
 
             # Wait for the ACK from the server
