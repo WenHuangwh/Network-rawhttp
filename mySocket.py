@@ -197,7 +197,7 @@ class RawSocket:
             # Check if the received packet is an ACK with payload
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 # Update sequence and acknowledgement numbers
-                self._seq = tcp_datagram.ack_seq + len(tcp_datagram.payload)
+                self._seq = tcp_datagram.ack_seq
                 self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
 
                 # Send ACK to the server
