@@ -148,7 +148,7 @@ class RawSocket:
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
                     self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
-                    print(f"payload: {tcp_datagram.payload.decode('utf-8')}")
+                    print(f"payload: {tcp_datagram.payload.decode()}")
                     self._send_one(ACK)
                     break
                 else:
