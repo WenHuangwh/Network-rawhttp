@@ -196,7 +196,7 @@ class RawSocket:
         if tcp_datagram != None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == SYN_ACK:
             # send sefl.seq, self.ack = server.seq + 1
             self._ack_seq = tcp_datagram.seq + 1
-            rawSocket._send_one(ACK, "")
+            self._send_one(ACK, "")
             print("Connected")
             return True
         print("Receive time expired")
