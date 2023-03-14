@@ -44,8 +44,8 @@ class RawSocket:
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
-            # Maximum Segment Size is 536 bytes.
-            self.mss = 536
+            # Maximum Segment Size is 512 bytes.
+            self.mss = 512
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
@@ -129,6 +129,29 @@ class RawSocket:
         packet = ip_header + tcp_header + data
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
+
+    def send(self, data):
+        # Split the data into segments according to the MSS
+        segments = [data[i:i+MSS] for i in range(0, len(data), MSS)]
+
+        for segment in segments:
+            # Send the data segment
+            self._send_one(PSH_ACK, segment)
+
+            # Wait for the ACK from the server
+            while True:
+                tcp_datagram = self._receive_one()
+                if tcp_datagram is None:
+                    continue
+
+                # Check if the received packet is an ACK for the current data segment
+                if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq + len(segment):
+                    # Update the sequence number and break out of the loop to send the next segment
+                    self._seq += len(segment)
+                    self._ack_seq = tcp_datagram.seq
+                    break
+                else:
+                    print("Unexpected packet received. Waiting for ACK...")
 
     # Recv
     def check_incomingPKT(self, packet):

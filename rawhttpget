@@ -58,16 +58,13 @@ def main():
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
 
     connection = rawSocket.handshake()
-    # tearDown(rawSocket)
-
 
     if not connection:
         sys.exit(1)
 
-    rawSocket.close()
-
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
-    # rawSocket.send(PSH_ACK, request)
+
+    rawSocket.send(request)
     # rawSocket.receive()
     # rawSocket.send(PSH_ACK, request)
     # # rawSocket.receive()
