@@ -149,6 +149,7 @@ class RawSocket:
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
                     self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+                    self._send_one(ACK)
                     break
                 else:
                     print("Unexpected packet received. Waiting for ACK...")
