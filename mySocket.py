@@ -160,10 +160,10 @@ class RawSocket:
         ip_datagram = self.unpack_ip_header(packet)
         tcp_datagram = self.unpack_tcp_header(packet)
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
-            print("Invalid ip address")
+            # print("Invalid ip address")
             return False
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
-            print("Invalid port")
+            # print("Invalid port")
             return False
         # All checks passed, return True
         return True
@@ -172,7 +172,7 @@ class RawSocket:
         cur_time = time.time()
         while time.time() - cur_time <= timeout:
             received_pkt = self.recv_socket.recv(size)
-            print(received_pkt.hex())
+            # print(received_pkt.hex())
             if len(received_pkt) == 0:
                 continue
             if self.check_incomingPKT(received_pkt):
