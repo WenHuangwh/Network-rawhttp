@@ -249,9 +249,8 @@ class RawSocket:
         window_size = tcp_header[6]
         checksum = tcp_header[7]
         urgent_pointer = tcp_header[8]
-        payload = packet[header_length:]
+        payload = packet[20 + header_length:]
         return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload)
-
 
     def handshake(self):
         # send self.seq = 0

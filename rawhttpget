@@ -44,9 +44,9 @@ def main():
 
     # Split URL into host and path components
     parsed_url = urlparse(url)
-    filename = url.split("/")[-1]
+    filename = parsed_url.path.split("/")[-1]  # Corrected line
     if not filename:
-        path = "index.html"
+        filename = "index.html"  # Corrected line
 
     dest_hostname = parsed_url.hostname
     dest_ip_addr = socket.gethostbyname(dest_hostname)
