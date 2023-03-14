@@ -120,7 +120,7 @@ class RawSocket:
         tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
         return tcp_header
 
-    def _send_one(self, flags, data):
+    def _send_one(self, flags, data=""):
         data = data.encode()
         if len(data) % 2 == 1:
             data += b'\x00'
