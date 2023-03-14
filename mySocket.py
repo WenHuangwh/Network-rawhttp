@@ -137,22 +137,18 @@ class RawSocket:
         for segment in segments:
             # Send the data segment
             self._send_one(PSH_ACK, segment)
+            self._seq += len(segment)
 
             # Wait for the ACK from the server
             while True:
                 tcp_datagram = self._receive_one()
-
                 if tcp_datagram is None:
                     continue
-
                 print(f"tcp_ack: {tcp_datagram.ack_seq}, _seq: {self._seq}, len: {len(segment)}")
-
                 # Check if the received packet is an ACK for the current data segment
-                if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq + len(segment):
-                    # Update the sequence number
-                    self._seq += len(segment)
+                if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
-                    self._ack_seq = tcp_datagram.seq
+                    self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
                     break
                 else:
                     print("Unexpected packet received. Waiting for ACK...")
