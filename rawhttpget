@@ -32,8 +32,8 @@ def handshake(rawSocket, timeout=60):
         print("1:")
         print(tcp_datagram)
         if tcp_datagram != None and tcp_datagram.flags == SYN_ACK:
-            # rawSocket.send(ACK, "")
-            # tcp_datagram = rawSocket.receive()
+            rawSocket.send(ACK, "")
+            tcp_datagram = rawSocket.receive()
             print("2:")
             print(tcp_datagram)
             print("Connected")
