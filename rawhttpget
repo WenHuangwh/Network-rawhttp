@@ -57,7 +57,7 @@ def main():
     # handshake
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
 
-    rawSocket.handshake()
+    connection = rawSocket.handshake()
     # tearDown(rawSocket)
 
 
