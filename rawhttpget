@@ -79,7 +79,7 @@ def main():
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
 
     connection = handshake(rawSocket)
-    tearDown(rawSocket)
+    # tearDown(rawSocket)
 
 
     if not connection:
