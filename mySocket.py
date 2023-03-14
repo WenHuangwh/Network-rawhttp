@@ -199,7 +199,5 @@ class RawSocket:
             rawSocket._send_one(ACK, "")
             print("Connected")
             return True
-        else:
-            continue
-    print("Receive time expired")
-    return False
+        print("Receive time expired")
+        return False
