@@ -43,7 +43,7 @@ def handshake(rawSocket, timeout=60):
     print("Receive time expired")
     return False
 
-def tearDown(rawSocket, rawSocket, timeout=60):
+def tearDown(rawSocket, timeout=60):
     rawSocket.send(ACK, "")
     rawSocket.send(FIN, "")
     tcp_datagram = rawSocket.receive()
@@ -79,7 +79,7 @@ def main():
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
 
     connection = handshake(rawSocket)
-    tearDown(rawSocket, rawSocket)
+    tearDown(rawSocket)
 
 
     if not connection:
