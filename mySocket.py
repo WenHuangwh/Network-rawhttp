@@ -188,7 +188,7 @@ class RawSocket:
         # send self.seq = 0
         self._send_one(SYN, "")
         # self.seq = seq1 + 1
-        self.seq += 1
+        self._seq += 1
         # Expected server,seq = random server.ack = self.seq
         tcp_datagram = self._receive_one()
         print("1:")
