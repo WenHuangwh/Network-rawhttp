@@ -132,7 +132,8 @@ class RawSocket:
 
     def send(self, data):
         # Split the data into segments according to the MSS
-        segments = [data[i:i+MSS] for i in range(0, len(data), MSS)]
+        
+        segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
 
         for segment in segments:
             # Send the data segment
