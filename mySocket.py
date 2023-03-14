@@ -90,7 +90,7 @@ class RawSocket:
         # tcp header fields
         tcp_src = self._srcPort
         tcp_dest = self._destPort
-        tcp_seq = self.tcp_seq
+        tcp_seq = self._seq
         tcp_ack_seq = self._ack_seq
         tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
         #tcp flags
