@@ -146,7 +146,7 @@ class RawSocket:
         # All checks passed, return True
         # Update the TCP sequence and acknowledgement numbers
         self.tcp_ack_seq = tcp_datagram.sequence_number + len(tcp_datagram.payload)
-        if SYN in tcp_datagram.flags:
+        if tcp_datagram.flags & SYN:
             self.tcp_seq += 1
         return True
 
