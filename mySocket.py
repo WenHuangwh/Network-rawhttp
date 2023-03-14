@@ -14,17 +14,13 @@ FIN_ACK = 0x11   # 0b00010001
 PSH_ACK = 0x18   # 0b00011000
 
 class RawSocket:
-    # Class attribute to keep track of the last used identification value 
-    ip_id_counter = 0
 
     def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port, timeout=60):
         try:
-            # Creates a raw socket for sending packets.
+            # Creates two raw sockets for sending and receiving packets.
             self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
             self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
             self.recv_socket.settimeout(timeout)
-            
-
             self._srcIpAddr = src_ipAddr
             self._destIpAddr = dest_ipAddr
             # Choosing a random port number within the dynamic allocation range 
@@ -32,10 +28,12 @@ class RawSocket:
             self._destPort = dest_port
             
             # Generates a random TCP sequence number within the valid range (i.e., 0 to 2^32-1).
-            self.tcp_seq = randint(0, (2 << 31) - 1)
+            self._seq = randint(0, (2 << 31) - 1)
             
             # Sets the initial TCP acknowledgement sequence number to 0.
-            self.tcp_ack_seq = 0
+            self._ack_seq = 0
+
+            self.ip_id = 1
             
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (5840)
@@ -76,8 +74,8 @@ class RawSocket:
         ip_ver = 4
         ip_tos = 0
         ip_tot_len = 0
-        RawSocket.ip_id_counter = (RawSocket.ip_id_counter + 1) % 65536
-        ip_id = RawSocket.ip_id_counter
+        ip_id = self.ip_id
+        self.ip_id += 1
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
@@ -93,7 +91,7 @@ class RawSocket:
         tcp_src = self._srcPort
         tcp_dest = self._destPort
         tcp_seq = self.tcp_seq
-        tcp_ack_seq = self.tcp_ack_seq
+ = sel
         tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
         #tcp flags
         tcp_window = self.tcp_adwind	#	maximum allowed window size
@@ -104,7 +102,7 @@ class RawSocket:
         tcp_flags = flags
 
         # the ! in the pack format string means network order
-        tcp_header = pack('!HHLLBBHHH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
+        tcp_header = pack('!HHLLBBHHH' , tcp_src, tcp_dest, tcp_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
 
         # pseudo header fields
         src_address = socket.inet_aton( self._srcIpAddr )
@@ -119,10 +117,10 @@ class RawSocket:
         tcp_check = self.checksum(psh)
 
         # make the tcp header again and fill the correct checksum - remember checksum is NOT in network byte order
-        tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
+        tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
         return tcp_header
 
-    def send(self, flags, data):
+    def _send_one(self, flags, data):
         data = data.encode()
         if len(data) % 2 == 1:
             data += b'\x00'
@@ -130,7 +128,7 @@ class RawSocket:
         tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
-        self.tcp_seq += len(data)
+
 
     # Recv
     def check_incomingPKT(self, packet):
@@ -144,13 +142,9 @@ class RawSocket:
             print("Invalid port")
             return False
         # All checks passed, return True
-        # Update the TCP sequence and acknowledgement numbers
-        self.tcp_ack_seq = tcp_datagram.sequence_number + len(tcp_datagram.payload)
-        if tcp_datagram.flags & SYN:
-            self.tcp_seq += 1
         return True
 
-    def receive(self, size=20480, timeout=60):
+    def _receive_one(self, size=20480, timeout=60):
         cur_time = time.time()
         while time.time() - cur_time <= timeout:
             received_pkt = self.recv_socket.recv(size)
@@ -175,7 +169,7 @@ class RawSocket:
         return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
 
     def unpack_tcp_header(self, packet):
-        TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'sequence_number', 'acknowledgement_number', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload'])
+        TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload'])
         tcp_header = unpack('!HHLLBBHHH', packet[20:40])
         src_port = tcp_header[0]
         dest_port = tcp_header[1]
@@ -188,3 +182,24 @@ class RawSocket:
         urgent_pointer = tcp_header[8]
         payload = packet[header_length:]
         return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload)
+
+
+    def handshake(self):
+        # send self.seq = 0
+        rawSocket._send_one(SYN, "")
+        # self.seq = seq1 + 1
+        self.seq += 1
+        # Expected server,seq = random server.ack = self.seq
+        tcp_datagram = self._receive_one()
+        print("1:")
+        print(tcp_datagram)
+        if tcp_datagram != None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == SYN_ACK:
+            # send sefl.seq, self.ack = server.seq + 1
+            self._ack_seq = tcp_datagram.seq + 1
+            rawSocket._send_one(ACK, "")
+            print("Connected")
+            return True
+        else:
+            continue
+    print("Receive time expired")
+    return False
