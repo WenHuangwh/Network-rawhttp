@@ -201,3 +201,25 @@ class RawSocket:
             return True
         print("Receive time expired")
         return False
+
+    def close(self):
+        # Send a FIN packet to initiate the connection teardown process
+        self._send_one(FIN, "")
+        # Increment the sequence number after sending the FIN packet
+        self._seq += 1
+
+        # Wait for an ACK packet from the server
+        tcp_datagram = self._receive_one()
+        if tcp_datagram is not None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == ACK:
+            # Received ACK for our FIN packet, now wait for the server's FIN packet
+            tcp_datagram = self._receive_one()
+            if tcp_datagram is not None and (tcp_datagram.flags & FIN) == FIN:
+                # Received FIN packet from the server, update the acknowledgment number
+                self._ack_seq = tcp_datagram.seq + 1
+                # Send the final ACK packet to complete the four-way teardown process
+                self._send_one(ACK, "")
+                print("Connection closed")
+                return True
+        print("Error closing connection")
+        return False
+
