@@ -186,7 +186,7 @@ class RawSocket:
 
     def handshake(self):
         # send self.seq = 0
-        rawSocket._send_one(SYN, "")
+        self._send_one(SYN, "")
         # self.seq = seq1 + 1
         self.seq += 1
         # Expected server,seq = random server.ack = self.seq
