@@ -122,8 +122,6 @@ class RawSocket:
 
     def _send_one(self, flags, data=""):
         data = data.encode()
-        if len(data) % 2 == 1:
-            data += b'\x00'
         ip_header = self.ip_header()
         tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
@@ -135,9 +133,10 @@ class RawSocket:
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
 
         for segment in segments:
+            if len(segment) % 2 == 1:
+                segment += " "
             # Send the data segment
             self._send_one(PSH_ACK, segment)
-            self._seq += 1
             self._seq += len(segment)
 
             # Wait for the ACK from the server
@@ -145,7 +144,7 @@ class RawSocket:
                 tcp_datagram = self._receive_one()
                 if tcp_datagram is None:
                     continue
-                print(f"tcp_ack: {tcp_datagram.ack_seq}, _seq: {self._seq}, len: {len(segment)}")
+                print(f"tcp_ack: {tcp_datagram.ack_seq}, _seq: {self._seq}, len: {len(segment)}, payload: {len(tcp_datagram.payload)}")
                 # Check if the received packet is an ACK for the current data segment
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
@@ -213,12 +212,10 @@ class RawSocket:
     def handshake(self):
         # send self.seq = 0
         self._send_one(SYN, "")
-        # self.seq = seq1 + 1
+        # self.seq += 1
         self._seq += 1
         # Expected server,seq = random server.ack = self.seq
         tcp_datagram = self._receive_one()
-        print("1:")
-        print(tcp_datagram)
         if tcp_datagram != None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == SYN_ACK:
             # send sefl.seq, self.ack = server.seq + 1
             self._ack_seq = tcp_datagram.seq + 1
