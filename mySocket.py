@@ -102,7 +102,7 @@ class RawSocket:
         tcp_flags = flags
 
         # the ! in the pack format string means network order
-        tcp_header = pack('!HHLLBBHHH' , tcp_src, tcp_dest, tcp_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
+        tcp_header = pack('!HHLLBBHHH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
 
         # pseudo header fields
         src_address = socket.inet_aton( self._srcIpAddr )
@@ -117,7 +117,7 @@ class RawSocket:
         tcp_check = self.checksum(psh)
 
         # make the tcp header again and fill the correct checksum - remember checksum is NOT in network byte order
-        tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
+        tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
         return tcp_header
 
     def _send_one(self, flags, data):
