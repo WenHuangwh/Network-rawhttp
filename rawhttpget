@@ -71,7 +71,7 @@ def main():
     # rawSocket.send(FIN, "")
     # rawSocket.send(FIN_ACK, "")
 
-    
+    rawSocket.close()
 
 if __name__ == "__main__":
     main()
