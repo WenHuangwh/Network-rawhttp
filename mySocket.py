@@ -148,7 +148,7 @@ class RawSocket:
                 # Check if the received packet is an ACK for the current data segment
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
                     # Update the acknowledgement sequence number
-                    self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+                    self._ack_seq = tcp_datagram.seq
                     self._send_one(ACK)
                     break
                 else:
