@@ -132,7 +132,6 @@ class RawSocket:
 
     def send(self, data):
         # Split the data into segments according to the MSS
-        
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
 
         for segment in segments:
@@ -142,21 +141,22 @@ class RawSocket:
             # Wait for the ACK from the server
             while True:
                 tcp_datagram = self._receive_one()
-                
+
                 if tcp_datagram is None:
                     continue
 
-                if tcp_datagram.flags == ACK:
-                    print(tcp_datagram)
-                    
+                print(f"tcp_ack: {tcp_datagram.ack_seq}, _seq: {self._seq}, len: {len(segment)}")
+
                 # Check if the received packet is an ACK for the current data segment
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq + len(segment):
-                    # Update the sequence number and break out of the loop to send the next segment
+                    # Update the sequence number
                     self._seq += len(segment)
+                    # Update the acknowledgement sequence number
                     self._ack_seq = tcp_datagram.seq
                     break
                 else:
                     print("Unexpected packet received. Waiting for ACK...")
+
 
     # Recv
     def check_incomingPKT(self, packet):
