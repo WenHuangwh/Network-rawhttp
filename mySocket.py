@@ -142,9 +142,11 @@ class RawSocket:
             # Wait for the ACK from the server
             while True:
                 tcp_datagram = self._receive_one()
+                
                 if tcp_datagram is None:
                     continue
-
+                    
+                print(tcp_datagram)
                 # Check if the received packet is an ACK for the current data segment
                 if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq + len(segment):
                     # Update the sequence number and break out of the loop to send the next segment
