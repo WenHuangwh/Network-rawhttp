@@ -76,8 +76,8 @@ class RawSocket:
         ip_ver = 4
         ip_tos = 0
         ip_tot_len = 0
-        SendSocket.ip_id_counter = (SendSocket.ip_id_counter + 1) % 65536
-        ip_id = SendSocket.ip_id_counter
+        RawSocket.ip_id_counter = (RawSocket.ip_id_counter + 1) % 65536
+        ip_id = RawSocket.ip_id_counter
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
