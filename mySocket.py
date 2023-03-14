@@ -13,15 +13,18 @@ FIN = 0x01   # 0b00000001
 FIN_ACK = 0x11   # 0b00010001
 PSH_ACK = 0x18   # 0b00011000
 
-class SendSocket:
+class RawSocket:
     # Class attribute to keep track of the last used identification value 
     ip_id_counter = 0
 
     def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port, timeout=60):
         try:
             # Creates a raw socket for sending packets.
-            self.ip_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+            self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+            self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+            self.recv_socket.settimeout(timeout)
             
+
             self._srcIpAddr = src_ipAddr
             self._destIpAddr = dest_ipAddr
             # Choosing a random port number within the dynamic allocation range 
@@ -53,7 +56,7 @@ class SendSocket:
         # Prints IP and port number for debugging purposes.
         print('src IP and port:', self._srcIpAddr, self._srcPort)
         print('Dest IP and port:', self._destIpAddr, self._destPort)
-        
+    
     # checksum functions needed for calculation checksum
     def checksum(self, msg):
         s = 0
@@ -126,62 +129,18 @@ class SendSocket:
         ip_header = self.ip_header()
         tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
-        self.ip_socket.sendto(packet, (self._destIpAddr, self._destPort))
+        self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
+        self.tcp_seq += len(data)
 
-
-class ReceiveSocket:
-    def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port, timeout=60):
-        try:
-            # Creates a raw socket for receiving packets.
-            # By setting the protocol to IPPROTO_TCP, the socket will only receive TCP packets.
-            self.tcp_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-            self.tcp_socket.settimeout(timeout)
-            
-            # Retrieves the IP address of the local machine using socket.gethostname() 
-            # and socket.gethostbyname() methods.
-            self._srcIpAddr = src_ipAddr
-            self._destIpAddr = dest_ipAddr
-
-            # Choosing a random port number within the dynamic allocation range 
-            # (i.e., between 49152 and 65535) is a common practice to avoid port conflicts 
-            # with other running applications on the same machine.
-            self._srcPort = src_port
-            self._destPort = dest_port
-            
-            # Generates a random TCP sequence number within the valid range (i.e., 0 to 2^32-1).
-            self.tcp_seq = randint(0, (2 << 31) - 1)
-            
-            # Sets the initial TCP acknowledgement sequence number to 0.
-            self.tcp_ack_seq = 0
-            
-            # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (5840)
-            
-            # Congestion control variables.
-            # Sets the initial congestion window size to 1.
-            self.cwnd = 1
-            # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
-            # is in the slow start phase.
-            self.slow_start_flag = True
-            
-            # Maximum Segment Size is 536 bytes.
-            self.mss = 536
-        except socket.error as e:
-            # Prints an error message and exits the program if there is an error creating the sockets.
-            print("Error: Cannot create a raw socket", e)
-            sys.exit(1)
-        # Prints IP and port number for debugging purposes.
-        print('src IP and port:', self._srcIpAddr, self._srcPort)
-        print('Dest IP and port:', self._destIpAddr, self._destPort)
-
+    # Recv
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
         ip_datagram = self.unpack_ip_header(packet)
         tcp_datagram = self.unpack_tcp_header(packet)
-        if ip_datagram.src_address != self._srcIpAddr or ip_datagram.dest_address != self._destIpAddr:
+        if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
             print("Invalid ip address")
             return False
-        if tcp_datagram.src_port != self._srcPort or tcp_datagram.dest_port != self._destPort:
+        if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
             print("Invalid port")
             return False
         # All checks passed, return True
@@ -190,7 +149,8 @@ class ReceiveSocket:
     def receive(self, size=20480, timeout=60):
         cur_time = time.time()
         while time.time() - cur_time <= timeout:
-            received_pkt = self.tcp_socket.recv(size)
+            received_pkt = self.recv_socket.recv(size)
+            print(received_pkt.hex())
             if len(received_pkt) == 0:
                 continue
             if self.check_incomingPKT(received_pkt):

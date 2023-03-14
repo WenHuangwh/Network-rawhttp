@@ -6,7 +6,7 @@ from struct import *
 from random import randint
 import time
 from collections import namedtuple
-from mySocket import SendSocket, ReceiveSocket
+from mySocket import RawSocket
 
 SYN = 0x02   # 0b00000010
 ACK = 0x10   # 0b00010000
@@ -23,17 +23,17 @@ def getMyIpAddr(dest_ip_addr, dest_port):
     s.close()
     return my_ip_addr
 
-def handshake(sendSocket, receiveSocket, timeout=60):
+def handshake(rawSocket, timeout=60):
     cur_time = time.time()
     while time.time() - cur_time <= timeout:
         # Send SYN
-        sendSocket.send(SYN, "")
-        tcp_datagram = receiveSocket.receive()
+        rawSocket.send(SYN, "")
+        tcp_datagram = rawSocket.receive()
         print("1:")
         print(tcp_datagram)
         if tcp_datagram != None and tcp_datagram.flags == SYN_ACK:
-            # sendSocket.send(ACK, "")
-            # tcp_datagram = receiveSocket.receive()
+            # rawSocket.send(ACK, "")
+            # tcp_datagram = rawSocket.receive()
             print("2:")
             print(tcp_datagram)
             print("Connected")
@@ -43,15 +43,15 @@ def handshake(sendSocket, receiveSocket, timeout=60):
     print("Receive time expired")
     return False
 
-def tearDown(sendSocket, receiveSocket, timeout=60):
-    sendSocket.send(ACK, "")
-    sendSocket.send(FIN, "")
-    tcp_datagram = receiveSocket.receive()
+def tearDown(rawSocket, rawSocket, timeout=60):
+    rawSocket.send(ACK, "")
+    rawSocket.send(FIN, "")
+    tcp_datagram = rawSocket.receive()
     print("3:")
     print(tcp_datagram)
     if tcp_datagram != None and tcp_datagram.flags == ACK:
-        sendSocket.send(ACK, "")
-        tcp_datagram = receiveSocket.receive()
+        rawSocket.send(ACK, "")
+        tcp_datagram = rawSocket.receive()
         print("4:")
         print(tcp_datagram)
         print("Connected")
@@ -76,23 +76,22 @@ def main():
     src_ip_addr = getMyIpAddr(dest_ip_addr, dest_port)
 
     # handshake
-    sendSocket = SendSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
-    receiveSocket = ReceiveSocket(dest_ip_addr, src_ip_addr, dest_port, src_port)
+    rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
 
-    connection = handshake(sendSocket, receiveSocket)
-    tearDown(sendSocket, receiveSocket)
+    connection = handshake(rawSocket)
+    tearDown(rawSocket, rawSocket)
 
 
     if not connection:
         sys.exit(1)
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
-    # sendSocket.send(PSH_ACK, request)
-    # receiveSocket.receive()
-    # sendSocket.send(PSH_ACK, request)
-    # # receiveSocket.receive()
-    # sendSocket.send(FIN, "")
-    # sendSocket.send(FIN_ACK, "")
+    # rawSocket.send(PSH_ACK, request)
+    # rawSocket.receive()
+    # rawSocket.send(PSH_ACK, request)
+    # # rawSocket.receive()
+    # rawSocket.send(FIN, "")
+    # rawSocket.send(FIN_ACK, "")
 
     
 
