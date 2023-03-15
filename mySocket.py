@@ -317,7 +317,7 @@ class RawSocket:
 
         # Set the checksum field in the TCP header to zero
         tcp_header = bytearray(tcp_header)
-        struct.pack_into('!H', tcp_header, 16, 0)
+        pack_into('!H', tcp_header, 16, 0)
 
         # Calculate the checksum over the TCP pseudo-header, TCP header, and TCP data
         pseudo_header = ip_header[12:20] + b'\x00\x06' + struct.pack('!H', total_length - ip_header_length)
