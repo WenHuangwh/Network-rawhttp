@@ -10,17 +10,17 @@ High-level Approach
     > ip packets requirements:
         Your program must implement all features of IP packets. 
         This includes 
-        - [ ]validating the checksums of incoming packets, 
-        - [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
-        - [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
-        - [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
+            - [ ]validating the checksums of incoming packets, 
+            - [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
+            - [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
+            - [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP                        correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
 
     > tcp packets requirements:
         - [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
         - [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
         - [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
         - [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
-        - [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the higher-level, HTTP handling code. 
+        - [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the                  higher-level, HTTP handling code. 
         - [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
         - [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
 
@@ -32,22 +32,6 @@ High-level Approach
 
     > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
         # ip header fields
-        ip_ihl = 5 Internet Header Length
-        ip_ver = 4
-        ip_tos = 0
-        ip_tot_len = 0	# kernel will fill the correct total length
-        ip_id = 1	#Id of this packet
-        ip_frag_off = 0
-        ip_ttl = 255 Time to Live
-        ip_proto = socket.IPPROTO_TCP
-        ip_check = 0	# kernel will fill the correct checksum
-        ip_saddr = socket.inet_aton ( source_ip )	#Spoof the source ip address if you want to
-        ip_daddr = socket.inet_aton ( dest_ip )
-
-        ip_ihl_ver = (version << 4) + ihl
-
-        # the ! in the pack format string means network order
-        ip_header = pack('!BBHHHBBH4s4s' , ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
 
 3. Make TCP Segment/TCP header, calculate checksum, set and update sequence number
     The TCP protocol uses a sequence number to keep track of the data being transmitted between two endpoints. The sender assigns a unique sequence number to each segment it sends, and the receiver uses these sequence numbers to reconstruct the original data.
@@ -56,27 +40,6 @@ High-level Approach
 For example, if you sent a segment with sequence number 1000 and 500 bytes of data, the next segment you send should have a sequence number of 1500.
     > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
         # tcp header fields
-        tcp_source = 1234	# source port
-        tcp_dest = 80	# destination port
-        tcp_seq = 454
-        tcp_ack_seq = 0
-        tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
-        #tcp flags
-        tcp_fin = 0
-        tcp_syn = 1
-        tcp_rst = 0
-        tcp_psh = 0
-        tcp_ack = 0
-        tcp_urg = 0
-        tcp_window = socket.htons (5840)	#	maximum allowed window size
-        tcp_check = 0
-        tcp_urg_ptr = 0
-
-        tcp_offset_res = (tcp_doff << 4) + 0
-        tcp_flags = tcp_fin + (tcp_syn << 1) + (tcp_rst << 2) + (tcp_psh <<3) + (tcp_ack << 4) + (tcp_urg << 5)
-
-        # the ! in the pack format string means network order
-        tcp_header = pack('!HHLLBBHHH' , tcp_source, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
 
 4. Pack a network packet use struct.pack() (A packet = Ip header + Tcp header + data)
     Define functions to verify ip header checksum and tcp segment checksum 
