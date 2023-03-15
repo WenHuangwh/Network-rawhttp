@@ -1,0 +1,78 @@
+import binascii
+import struct
+import socket
+from struct import *
+
+# input type: bytes 
+def verify_tcp_checksum(byte_packet):
+    # Extract the IP header from the packet bytes
+    ip_header_length = (byte_packet[0] & 0x0F) * 4
+    ip_header = byte_packet[:ip_header_length]
+
+    # Verify the total length of the packet
+    total_length = struct.unpack('!H', ip_header[2:4])[0]
+    print("total_length",total_length)
+    print("len packet", len(byte_packet))
+    # if total_length != len(packet):
+    #     return False
+
+    # Extract the TCP header from the packet bytes
+    tcp_header_offset = ip_header_length
+    tcp_header_length = (byte_packet[tcp_header_offset + 12] >> 4) * 4
+    tcp_header = byte_packet[tcp_header_offset:tcp_header_offset+tcp_header_length]
+
+    # Extract the original TCP checksum value from the TCP header
+    original_checksum = struct.unpack('!H', tcp_header[16:18])[0]
+    print("original checksum", original_checksum)
+
+    if original_checksum == 0:
+        return True
+
+    # Set the checksum field in the TCP header to zero
+    tcp_header = bytearray(tcp_header)
+    struct.pack_into('!H', tcp_header, 16, 0)
+
+    # Calculate the checksum over the TCP pseudo-header, TCP header, and TCP data
+    pseudo_header = ip_header[12:20] + b'\x00\x06' + struct.pack('!H', total_length - ip_header_length)
+    tcp_data_offset = tcp_header_offset + tcp_header_length
+    tcp_data = byte_packet[tcp_data_offset:]
+
+    # Pad data with a zero byte if its length is not a multiple of 2
+    if len(tcp_data) % 2 != 0:
+        tcp_data += b'\x00'
+
+    checksum = 0
+    for chunk in [pseudo_header, tcp_header, tcp_data]:
+        for i in range(0, len(chunk), 2):
+            word = (chunk[i] << 8) + chunk[i+1]
+            checksum += word
+
+    while checksum > 0xffff:
+        checksum = (checksum & 0xffff) + (checksum >> 16)
+
+    calculated_checksum = ~checksum & 0xffff
+    print("calculated checksum", calculated_checksum)
+    
+    # Verify the checksum
+    is_valid = (calculated_checksum == original_checksum)
+
+    # Return the original TCP checksum value and whether the calculated checksum is valid
+    return is_valid
+
+
+
+
+def main():
+    # The input header needs to be at least 20 bytes long for a valid IPv4 header. 
+    hex_packet = "450000287e604000360692262d714518c0a801180050dbacf8605f3d816a2d61501000f498300000"
+    # Convert hex string to bytes
+    byte_packet = bytes.fromhex(byte_packet.replace(' ', ''))
+    # print(verify_packet_checksums(byte_packet)) 
+    # ip_header = byte_packet[:20]
+    # tcp_length = len(byte_packet) - 20
+    # tcp_header = byte_packet[20:20+tcp_length] 
+    # print("verification result",verify_tcp_checksum(byte_packet))
+    print(verify_tcp_checksum(byte_packet))
+
+if __name__ == "__main__":
+    main()
