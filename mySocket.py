@@ -388,7 +388,7 @@ class RawSocket:
         header = header[:10] + b'\x00\x00' + header[12:]
 
         # Calculate the new checksum
-        values = struct.unpack('!HHHHHHHHHH', header)
+        values = unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
