@@ -166,6 +166,7 @@ class RawSocket:
             return False
         # All checks passed, return True
         if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
+            print(packet.hex())
             return False
         return True
 
@@ -189,7 +190,6 @@ class RawSocket:
             # Receive a packet
             tcp_datagram = self._receive_one()
             
-
             # If no packet is received, continue waiting
             if tcp_datagram is None:
                 continue
@@ -290,24 +290,27 @@ class RawSocket:
                 return True
         print("Error closing connection")
         return False
-    
-    def verify_tcp_checksum(self, packet):
+
+    def verify_tcp_checksum(self, byte_packet):
         # Extract the IP header from the packet bytes
-        ip_header_length = (packet[0] & 0x0F) * 4
-        ip_header = packet[:ip_header_length]
+        ip_header_length = (byte_packet[0] & 0x0F) * 4
+        ip_header = byte_packet[:ip_header_length]
 
         # Verify the total length of the packet
         total_length = unpack('!H', ip_header[2:4])[0]
+        print("total_length",total_length)
+        print("len packet", len(byte_packet))
         # if total_length != len(packet):
         #     return False
 
         # Extract the TCP header from the packet bytes
         tcp_header_offset = ip_header_length
-        tcp_header_length = (packet[tcp_header_offset + 12] >> 4) * 4
-        tcp_header = packet[tcp_header_offset:tcp_header_offset+tcp_header_length]
+        tcp_header_length = (byte_packet[tcp_header_offset + 12] >> 4) * 4
+        tcp_header = byte_packet[tcp_header_offset:tcp_header_offset+tcp_header_length]
 
         # Extract the original TCP checksum value from the TCP header
-        original_checksum = struct.unpack('!H', tcp_header[16:18])[0]
+        original_checksum = unpack('!H', tcp_header[16:18])[0]
+        print("original checksum", original_checksum)
 
         if original_checksum == 0:
             return True
@@ -319,7 +322,7 @@ class RawSocket:
         # Calculate the checksum over the TCP pseudo-header, TCP header, and TCP data
         pseudo_header = ip_header[12:20] + b'\x00\x06' + struct.pack('!H', total_length - ip_header_length)
         tcp_data_offset = tcp_header_offset + tcp_header_length
-        tcp_data = packet[tcp_data_offset:]
+        tcp_data = byte_packet[tcp_data_offset:]
 
         # Pad data with a zero byte if its length is not a multiple of 2
         if len(tcp_data) % 2 != 0:
@@ -335,6 +338,7 @@ class RawSocket:
             checksum = (checksum & 0xffff) + (checksum >> 16)
 
         calculated_checksum = ~checksum & 0xffff
+        print("calculated checksum", calculated_checksum)
         
         # Verify the checksum
         is_valid = (calculated_checksum == original_checksum)
@@ -342,8 +346,7 @@ class RawSocket:
         # Return the original TCP checksum value and whether the calculated checksum is valid
         return is_valid
 
-
-    def verify_ipv4_checksum(self, header):
+    def verify_ipv4_checksum(self, byte_packet):
         """
         Verifies the checksum of an IPv4 header.
 
@@ -354,6 +357,8 @@ class RawSocket:
         Returns:
             bool: True if the checksum is valid, False otherwise.
         """
+        header = byte_packet[:20]
+
         if len(header) < 20:
             print("Invalid IPv4 header length")
             return False
@@ -383,7 +388,7 @@ class RawSocket:
         header = header[:10] + b'\x00\x00' + header[12:]
 
         # Calculate the new checksum
-        values = unpack('!HHHHHHHHHH', header)
+        values = struct.unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
