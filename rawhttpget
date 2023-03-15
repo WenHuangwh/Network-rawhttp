@@ -65,14 +65,15 @@ def main():
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
 
     rawSocket.send(request)
-    rawSocket.receive_all()
-    # rawSocket.receive()
-    # rawSocket.send(PSH_ACK, request)
-    # # rawSocket.receive()
-    # rawSocket.send(FIN, "")
-    # rawSocket.send(FIN_ACK, "")
+    payload = rawSocket.receive_all()
 
-    rawSocket.close()
+    # Save the payload to a .log file
+    with open("received_payload.log", "wb") as log_file:
+        log_file.write(payload)
+
+    print("Payload saved to received_payload.log")
+
+    # rawSocket.close()
 
 if __name__ == "__main__":
     main()

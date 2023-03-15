@@ -123,7 +123,7 @@ class RawSocket:
     def _send_one(self, flags, data=""):
         data = data.encode()
         ip_header = self.ip_header()
-        tcp_header = self.tcp_header(flags, data)
+        tcp_header = self.tcp_header(flags, data, ack_seq)
         packet = ip_header + tcp_header + data
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
@@ -190,43 +190,49 @@ class RawSocket:
         while True:
             # Receive a packet
             tcp_datagram = self._receive_one()
-            
+
             # If no packet is received, continue waiting
             if tcp_datagram is None:
                 continue
 
             # Check if the received packet is an ACK with payload
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
-                # Update sequence and acknowledgement numbers
-                self._seq = tcp_datagram.ack_seq
-                self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+                # Check the order of the packet
+                if tcp_datagram.seq == self._ack_seq:
+                    # Packet is in order, update the ack_seq
+                    self._ack_seq += len(tcp_datagram.payload)
 
-                # Send ACK to the server
-                self._send_one(ACK)
-
-                # Append the payload to the received_data list
-                received_data.append(tcp_datagram.payload)
-
-                # Check if the received packet has the FIN flag set
-                if tcp_datagram.flags & FIN:
-                    # Send ACK for the FIN flag
-                    self._ack_seq += 1
+                    # Send ACK to the server
                     self._send_one(ACK)
-                    break
+
+                    # Append the payload to the received_data list
+                    received_data.append(tcp_datagram.payload)
+
+                    # Check if the received packet has the FIN flag set
+                    if tcp_datagram.flags & FIN:
+                        # Send ACK for the FIN flag
+                        self._ack_seq += 1
+                        self._send_one(ACK)
+                        break
+                else:
+                    # Out of order packet received
+                    print("Out of order packet received. Sending ACK with the expected sequence number...")
+                    self._send_one(ACK)
+
             else:
                 print("Unexpected packet received. Waiting for data...")
 
         # Combine received payloads
-        total_payload = b''.join(received_data)
+        total_payload = b''.join(received_data)     
 
-        # Decode payload to a string, assuming UTF-8 encoding
-        try:
-            payload_string = total_payload.decode('utf-8')
-        except UnicodeDecodeError:
-            print("Unable to decode payload using UTF-8 encoding.")
-            payload_string = None
+        # Split the payload to remove the HTTP header
+        header, _, body = total_payload.partition(b'\r\n\r\n')
 
-        return payload_string
+        return body
+
+
+    
+
 
 
     def unpack_ip_header(self, packet):
