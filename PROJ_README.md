@@ -1,0 +1,131 @@
+CS5700 Project 4 Raw socket
+
+In this file, you should briefly describe your high-level approach, what TCP/IP features you implemented, and any challenges you faced. You must also include a detailed description of which student worked on which part of the code.
+
+High-level Approach
+1. Create 2 raw sockets to send and receive packets
+    self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+    self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+
+    > ip packets requirements:
+        Your program must implement all features of IP packets. 
+        This includes 
+        - [ ]validating the checksums of incoming packets, 
+        - [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
+        - [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
+        - [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
+
+    > tcp packets requirements:
+        - [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
+        - [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
+        - [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
+        - [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
+        - [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the higher-level, HTTP handling code. 
+        - [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
+        - [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
+
+    Define a checksum calculation function 
+
+2. Make IP Header and calculate checksum 
+    source_ip = local ip address from my machine (vm may be different)
+    dest_ip = 192.168.1.24(i.e. http://david.choffnes.com/classes/cs5700f22/2MB.log)
+
+    > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
+        # ip header fields
+        ip_ihl = 5 Internet Header Length
+        ip_ver = 4
+        ip_tos = 0
+        ip_tot_len = 0	# kernel will fill the correct total length
+        ip_id = 1	#Id of this packet
+        ip_frag_off = 0
+        ip_ttl = 255 Time to Live
+        ip_proto = socket.IPPROTO_TCP
+        ip_check = 0	# kernel will fill the correct checksum
+        ip_saddr = socket.inet_aton ( source_ip )	#Spoof the source ip address if you want to
+        ip_daddr = socket.inet_aton ( dest_ip )
+
+        ip_ihl_ver = (version << 4) + ihl
+
+        # the ! in the pack format string means network order
+        ip_header = pack('!BBHHHBBH4s4s' , ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
+
+3. Make TCP Segment/TCP header, calculate checksum, set and update sequence number
+    The TCP protocol uses a sequence number to keep track of the data being transmitted between two endpoints. The sender assigns a unique sequence number to each segment it sends, and the receiver uses these sequence numbers to reconstruct the original data.
+    To update the sequence number in the TCP segment, you should keep track of the last sequence number sent and increment it by the number of bytes sent in each subsequent segment. You can do this by adding the length of the data being sent to the previous sequence number.
+
+For example, if you sent a segment with sequence number 1000 and 500 bytes of data, the next segment you send should have a sequence number of 1500.
+    > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
+        # tcp header fields
+        tcp_source = 1234	# source port
+        tcp_dest = 80	# destination port
+        tcp_seq = 454
+        tcp_ack_seq = 0
+        tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
+        #tcp flags
+        tcp_fin = 0
+        tcp_syn = 1
+        tcp_rst = 0
+        tcp_psh = 0
+        tcp_ack = 0
+        tcp_urg = 0
+        tcp_window = socket.htons (5840)	#	maximum allowed window size
+        tcp_check = 0
+        tcp_urg_ptr = 0
+
+        tcp_offset_res = (tcp_doff << 4) + 0
+        tcp_flags = tcp_fin + (tcp_syn << 1) + (tcp_rst << 2) + (tcp_psh <<3) + (tcp_ack << 4) + (tcp_urg << 5)
+
+        # the ! in the pack format string means network order
+        tcp_header = pack('!HHLLBBHHH' , tcp_source, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
+
+4. Pack a network packet use struct.pack() (A packet = Ip header + Tcp header + data)
+    Define functions to verify ip header checksum and tcp segment checksum 
+    Be defensive: 
+    Requirement in project description: i.e. you must check the validity of IP headers from the remote server. Is the remote IP correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header? 
+
+5. Send the first network packet with **tcp flag SYN** to initiate the three-way handshake
+    **verify checksum in IP and TCP headers** before sending the packet.
+    > references: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
+        TCP segment structure Flags (8 bits)
+        Contains 8 1-bit flags (control bits) as follows:
+        CWR (1 bit): Congestion window reduced (CWR) flag is set by the sending host to indicate that it received a TCP segment with the ECE flag set and had responded in congestion control mechanism.[a]
+        ECE (1 bit): ECN-Echo has a dual role, depending on the value of the SYN flag. It indicates:
+        If the SYN flag is set (1), that the TCP peer is ECN capable.
+        If the SYN flag is clear (0), that a packet with Congestion Experienced flag set (ECN=11) in the IP header was received during normal transmission.[a] This serves as an indication of network congestion (or impending congestion) to the TCP sender.
+        URG (1 bit): Indicates that the Urgent pointer field is significant
+        ACK (1 bit): Indicates that the Acknowledgment field is significant. All packets after the initial SYN packet sent by the client should have this flag set.
+        PSH (1 bit): Push function. Asks to push the buffered data to the receiving application.
+        RST (1 bit): Reset the connection
+        SYN (1 bit): Synchronize sequence numbers. Only the first packet sent from each end should have this flag set. Some other flags and fields change meaning based on this flag, and some are only valid when it is set, and others when it is clear.
+        FIN (1 bit): Last packet from sender
+
+6. Receive **the SYN-ACK packet** from the server and **verify checksum in IP and TCP headers** on the received packet
+    Check the received packet TCP fragement flag field. 
+
+7. Send the ACK packet to complete the three-way handshake -- **connection established**
+
+    Based on the established TCP connection, create a TCP segment and send it using send socket 
+    (To send data, you should create a TCP segment with the appropriate source and destination port numbers, sequence number, and acknowledgement number, along with any data you wish to send. You should also set the appropriate TCP flags, such as the PSH and ACK flags, depending on the purpose of the segment.)
+
+    Continuously listen for incoming TCP segments on the socket you opened for receiving. 
+    When a segment arrives, you should check its sequence number and acknowledgement number to make sure it is part of the established TCP connection. 
+    If the segment is valid, you can extract any data it contains and process it accordingly.
+
+8. Download HTML content in the destination IP address.
+    1. Send an HTTP request to the server asking for the HTML content. The HTTP request should include the appropriate headers and request method (usually GET).
+    2. Receive the HTML content from the server. This can be done by reading data from the socket until the full content is received.
+    3. If the HTML content is large, it may be sent in multiple segments. In this case, the server will include a "Content-Length" header in the response to indicate the total length of the content. You should read data from the socket until you have received the entire content as indicated by the Content-Length header.
+    4. If the HTML content is too large to fit into a single read from the socket, you may need to implement a loop to read the content in chunks until the entire content is received.
+    5. Once the HTML content has been received, you can parse it to extract the information you need.
+    6. Close the TCP connection by sending a FIN packet to the server, and waiting for the server to acknowledge the FIN packet with an ACK packet.
+
+9. Other requirements in setting file name, print error msg if http status code is not 200
+
+TCP/IP Features Implemented
+
+
+
+
+Challenges
+
+Collaboration
