@@ -10,19 +10,19 @@ High-level Approach
     ip packets requirements:
     Your program must implement all features of IP packets. 
     This includes 
-    1.- [ ]validating the checksums of incoming packets, 
-    2.- [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
-    3.- [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
-    4.- [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP                        correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
+    - [ ]validating the checksums of incoming packets, 
+    - [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
+    - [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
+    - [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP                        correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
 
     tcp packets requirements:
-    1.- [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
-    2.- [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
-    3.- [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
-    4.- [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
-    5.- [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the                  higher-level, HTTP handling code. 
-    6.- [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
-    7.- [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
+    - [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
+    - [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
+    - [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
+    - [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
+    - [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the                  higher-level, HTTP handling code. 
+    - [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
+    - [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
 
     Define a checksum calculation function 
 
@@ -50,17 +50,6 @@ High-level Approach
     **verify checksum in IP and TCP headers** before sending the packet.
     > references: https://en.wikipedia.org/wiki/Transmission_Control_Protocol
         TCP segment structure Flags (8 bits)
-        Contains 8 1-bit flags (control bits) as follows:
-        CWR (1 bit): Congestion window reduced (CWR) flag is set by the sending host to indicate that it received a TCP segment with the ECE flag set and had responded in congestion control mechanism.[a]
-        ECE (1 bit): ECN-Echo has a dual role, depending on the value of the SYN flag. It indicates:
-        If the SYN flag is set (1), that the TCP peer is ECN capable.
-        If the SYN flag is clear (0), that a packet with Congestion Experienced flag set (ECN=11) in the IP header was received during normal transmission.[a] This serves as an indication of network congestion (or impending congestion) to the TCP sender.
-        URG (1 bit): Indicates that the Urgent pointer field is significant
-        ACK (1 bit): Indicates that the Acknowledgment field is significant. All packets after the initial SYN packet sent by the client should have this flag set.
-        PSH (1 bit): Push function. Asks to push the buffered data to the receiving application.
-        RST (1 bit): Reset the connection
-        SYN (1 bit): Synchronize sequence numbers. Only the first packet sent from each end should have this flag set. Some other flags and fields change meaning based on this flag, and some are only valid when it is set, and others when it is clear.
-        FIN (1 bit): Last packet from sender
 
 6. Receive **the SYN-ACK packet** from the server and **verify checksum in IP and TCP headers** on the received packet
     Check the received packet TCP fragement flag field. 
