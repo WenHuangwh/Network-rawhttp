@@ -297,7 +297,7 @@ class RawSocket:
         ip_header = packet[:ip_header_length]
 
         # Verify the total length of the packet
-        total_length = struct.unpack('!H', ip_header[2:4])[0]
+        total_length = unpack('!H', ip_header[2:4])[0]
         # if total_length != len(packet):
         #     return False
 
@@ -383,7 +383,7 @@ class RawSocket:
         header = header[:10] + b'\x00\x00' + header[12:]
 
         # Calculate the new checksum
-        values = struct.unpack('!HHHHHHHHHH', header)
+        values = unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
