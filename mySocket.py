@@ -123,7 +123,7 @@ class RawSocket:
     def _send_one(self, flags, data=""):
         data = data.encode()
         ip_header = self.ip_header()
-        tcp_header = self.tcp_header(flags, data, ack_seq)
+        tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
