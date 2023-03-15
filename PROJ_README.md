@@ -33,7 +33,7 @@ High-level Approach
     > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
         # ip header fields
 
-3. Make TCP Segment/TCP header, calculate checksum, set and update sequence number
+3. Make TCP Segment/TCP header, calculate checksum, set and update sequence number. 
     The TCP protocol uses a sequence number to keep track of the data being transmitted between two endpoints. The sender assigns a unique sequence number to each segment it sends, and the receiver uses these sequence numbers to reconstruct the original data.
     To update the sequence number in the TCP segment, you should keep track of the last sequence number sent and increment it by the number of bytes sent in each subsequent segment. You can do this by adding the length of the data being sent to the previous sequence number.
 
