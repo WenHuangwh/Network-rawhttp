@@ -320,7 +320,7 @@ class RawSocket:
         pack_into('!H', tcp_header, 16, 0)
 
         # Calculate the checksum over the TCP pseudo-header, TCP header, and TCP data
-        pseudo_header = ip_header[12:20] + b'\x00\x06' + struct.pack('!H', total_length - ip_header_length)
+        pseudo_header = ip_header[12:20] + b'\x00\x06' + pack('!H', total_length - ip_header_length)
         tcp_data_offset = tcp_header_offset + tcp_header_length
         tcp_data = byte_packet[tcp_data_offset:]
 
