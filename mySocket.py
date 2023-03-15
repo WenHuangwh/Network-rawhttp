@@ -166,7 +166,6 @@ class RawSocket:
             return False
         # All checks passed, return True
         if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
-            print(packet.hex())
             return False
         return True
 
