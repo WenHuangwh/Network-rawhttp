@@ -10,19 +10,19 @@ High-level Approach
     > ip packets requirements:
         Your program must implement all features of IP packets. 
         This includes 
-            - [ ]validating the checksums of incoming packets, 
-            - [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
-            - [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
-            - [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP                        correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
+            1.- [ ]validating the checksums of incoming packets, 
+            2.- [ ]and setting the correct version, header length and total length, protocol identifier, and checksum in each outgoing packet.
+            3.- [ ]Obviously, you will also need to correctly set the source and destination IP in each outgoing packet. 
+            4.- [ ]Furthermore, your code must be defensive, i.e. you must check the validity of IP headers from the remote server. Is the remote IP                        correct? Is the checksum correct? Does the protocol identifier match the contents of the encapsulated header?
 
     > tcp packets requirements:
-        - [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
-        - [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
-        - [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
-        - [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
-        - [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the                  higher-level, HTTP handling code. 
-        - [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
-        - [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
+        1.- [ ]Your program must verify the checksums of incoming TCP packets, and generate correct checksums for outgoing packets. 
+        2.- [ ]Your code must select a valid local port to send traffic on, perform the three-way handshake, and correctly handle connection teardown. 
+        3.- [ ]Your code must correctly handle sequence and acknowledgement numbers. Your code may manage the advertised window as you see fit. 
+        4.- [ ]Your code must include basic timeout functionality: if a packet is not ACKed within 1 minute, assume the packet is lost and retransmit it. 
+        5.- [ ]Your code must be able to receive out-of-order incoming packets and put them back into the correct order before delivering them to the                  higher-level, HTTP handling code. 
+        6.- [ ]Your code should identify and discard duplicate packets. Finally, your code must implement a basic congestion window: your code should start with cwnd=1, and increment the cwnd after each succesful ACK, up to a fixed maximum of 1000 (e.g. cwnd must be <=1000 at all times). If your program observes a packet drop or a timeout, reset the cwnd to 1.
+        7.- [ ]As with IP, your code must be defensive: check to ensure that all incoming packets have valid checksums and in-order sequence numbers. If your program does not receive any data from the remote server for three minutes, your program can assume that the connection has failed. In this case, your program can simply print an error message and close.
 
     Define a checksum calculation function 
 
@@ -37,7 +37,7 @@ High-level Approach
     The TCP protocol uses a sequence number to keep track of the data being transmitted between two endpoints. The sender assigns a unique sequence number to each segment it sends, and the receiver uses these sequence numbers to reconstruct the original data.
     To update the sequence number in the TCP segment, you should keep track of the last sequence number sent and increment it by the number of bytes sent in each subsequent segment. You can do this by adding the length of the data being sent to the previous sequence number.
 
-For example, if you sent a segment with sequence number 1000 and 500 bytes of data, the next segment you send should have a sequence number of 1500.
+    For example, if you sent a segment with sequence number 1000 and 500 bytes of data, the next segment you send should have a sequence number of 1500.
     > reference: https://www.binarytides.com/raw-socket-programming-in-python-linux/  
         # tcp header fields
 
