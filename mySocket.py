@@ -5,6 +5,7 @@ from struct import *
 from random import randint
 import time
 from collections import namedtuple, deque
+from priorityQueue import PriorityQueue
 
 
 SYN = 0x02   # 0b00000010
@@ -47,8 +48,8 @@ class RawSocket:
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
-            # Maximum Segment Size is 512 bytes.
-            self.mss = 512
+            # This is ipv4 so Maximum Segment Size is 1460 bytes.
+            self.mss = 1460
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
@@ -312,6 +313,9 @@ class RawSocket:
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
 
+        # Initialize the priority queue
+        packet_queue = PriorityQueue()
+
         while True:
             tcp_datagram = self._receive_one()
 
@@ -320,28 +324,31 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
-                    self._ack_seq += len(tcp_datagram.payload)
-                    self._send_one(ACK, "")
-                    received_data.append(tcp_datagram.payload)
+                    # Add the received packet to the priority queue
+                    packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
 
-                    # Reset the duplicate ACK counter
-                    dup_ack_counter = 0
+                    # Process packets in the correct order from the priority queue
+                    while not packet_queue.is_empty() and packet_queue.queue[0][0] == self._ack_seq:
+                        payload = packet_queue.pop()
+                        self._ack_seq += len(payload)
+                        self._send_one(ACK, "")
+                        received_data.append(payload)
 
-                    # Adjust the cwnd based on slow start or congestion avoidance
-                    if self.slow_start_flag:
-                        self.cwnd *= 2
-                        if self.cwnd >= self.ssthresh:
-                            self.slow_start_flag = False
-                    else:
-                        self.cwnd += 1
+                        # Reset the duplicate ACK counter
+                        dup_ack_counter = 0
 
-                    # Check if the server's advertised window is smaller than the cwnd
-                    if tcp_datagram.adwind < self.cwnd:
-                        self.cwnd = tcp_datagram.adwind
+                        # Adjust the cwnd based on slow start or congestion avoidance
+                        if self.slow_start_flag:
+                            self.cwnd *= 2
+                            if self.cwnd >= self.ssthresh:
+                                self.slow_start_flag = False
+                        else:
+                            self.cwnd += 1
+                elif tcp_datagram.seq > self._ack_seq:  # Out-of-order packet received
+                    packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
 
                 else:  # Duplicate packet received
                     dup_ack_counter += 1
-
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
                         self._send_one(ACK, "")
 
@@ -356,6 +363,7 @@ class RawSocket:
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
+
 
 
 
