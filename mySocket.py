@@ -129,29 +129,100 @@ class RawSocket:
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
 
+    # def send(self, data):
+    #     # Split the data into segments according to the MSS
+    #     segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
+
+    #     for segment in segments:
+    #         if len(segment) % 2 == 1:
+    #             segment += " "
+    #         # Send the data segment
+    #         self._send_one(PSH_ACK, segment)
+    #         self._seq += len(segment)
+
+    #         # Wait for the ACK from the server
+    #         while True:
+    #             tcp_datagram = self._receive_one()
+    #             if tcp_datagram is None:
+    #                 continue
+    #             # Check if the received packet is an ACK for the current data segment
+    #             if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
+    #                 # Update the acknowledgement sequence number
+    #                 self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+    #                 break
+    #             else:
+    #                 print("Unexpected packet received. Waiting for ACK...")
+
     def send(self, data):
-        # Split the data into segments according to the MSS
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
 
-        for segment in segments:
-            if len(segment) % 2 == 1:
-                segment += " "
-            # Send the data segment
-            self._send_one(PSH_ACK, segment)
-            self._seq += len(segment)
+        # Implement a deque to handle segments in flight
+        segments_in_flight = deque()
+
+        # Initialize the duplicate ACK counter
+        dup_ack_counter = 0
+
+        while segments or segments_in_flight:
+            # Send segments within the cwnd limit
+            while segments and len(segments_in_flight) < self.cwnd:
+                segment = segments.pop(0)
+                if len(segment) % 2 == 1:
+                    segment += " "
+                self._send_one(PSH_ACK, segment)
+                self._seq += len(segment)
+                segments_in_flight.append((self._seq, segment))
 
             # Wait for the ACK from the server
-            while True:
-                tcp_datagram = self._receive_one()
-                if tcp_datagram is None:
-                    continue
-                # Check if the received packet is an ACK for the current data segment
-                if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
+            tcp_datagram = self._receive_one(timeout=60)
+
+            if tcp_datagram is None:  # Timeout occurred
+                # Timeout handling
+                self.ssthresh = max(len(segments_in_flight) // 2, 2)
+                self.cwnd = 1
+                self.slow_start_flag = True
+                dup_ack_counter = 0
+
+                # Resend the first unacknowledged segment
+                unacked_seq, unacked_segment = segments_in_flight[0]
+                self._send_one(PSH_ACK, unacked_segment)
+
+            elif tcp_datagram.flags == ACK:
+                # Check if the received packet is an ACK for a segment in flight
+                if any(s[0] == tcp_datagram.ack_seq for s in segments_in_flight):
                     # Update the acknowledgement sequence number
                     self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
-                    break
-                else:
-                    print("Unexpected packet received. Waiting for ACK...")
+
+                    # Remove acknowledged segments from segments_in_flight
+                    segments_in_flight = deque(s for s in segments_in_flight if s[0] > tcp_datagram.ack_seq)
+
+                    # Reset duplicate ACK counter
+                    dup_ack_counter = 0
+
+                    # Adjust the cwnd based on slow start or congestion avoidance
+                    if self.slow_start_flag:
+                        self.cwnd *= 2
+                        if self.cwnd >= self.ssthresh:
+                            self.slow_start_flag = False
+                    else:
+                        self.cwnd += 1
+
+                else:  # Duplicate ACK received
+                    dup_ack_counter += 1
+                    if dup_ack_counter >= 3:  # Fast retransmit
+                        # Update the ssthresh and cwnd
+                        self.ssthresh = max(len(segments_in_flight) // 2, 2)
+                        self.cwnd = self.ssthresh + 3
+
+                        # Resend the first unacknowledged segment
+                        unacked_seq, unacked_segment = segments_in_flight[0]
+                        self._send_one(PSH_ACK, unacked_segment)
+
+                        # Reset the duplicate ACK counter
+                        dup_ack_counter = 0
+
+            else:
+                print("Unexpected packet received. Waiting for ACK...")
+
 
 
     # Recv
