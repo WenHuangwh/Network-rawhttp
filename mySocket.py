@@ -322,7 +322,7 @@ class RawSocket:
             if tcp_datagram is None:
                 continue
 
-            if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
+            if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
                     print('right')
                     # Process the received packet
@@ -366,7 +366,7 @@ class RawSocket:
                     self._send_one(ACK, "")
                     break
 
-            elif tcp_datagram.flags & FIN:
+            elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
                 print('finish')
                 self._send_one(ACK, "")
                 break
