@@ -42,6 +42,8 @@ class RawSocket:
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self.cwnd = 1
+            self.ssthresh=64*1024
+            self.rwnd = self.ssthresh
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
