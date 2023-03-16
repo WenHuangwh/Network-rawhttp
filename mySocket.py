@@ -324,8 +324,22 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
-                    # Add the received packet to the priority queue
-                    packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
+                    print('right')
+                    # Process the received packet
+                    self._ack_seq += len(tcp_datagram.payload)
+                    self._send_one(ACK, "")
+                    received_data.append(tcp_datagram.payload)
+
+                    # Reset the duplicate ACK counter
+                    dup_ack_counter = 0
+
+                    # Adjust the cwnd based on slow start or congestion avoidance
+                    if self.slow_start_flag:
+                        self.cwnd *= 2
+                        if self.cwnd >= self.ssthresh:
+                            self.slow_start_flag = False
+                    else:
+                        self.cwnd += 1
 
                     # Process packets in the correct order from the priority queue
                     while not packet_queue.is_empty() and packet_queue.queue[0][0] == self._ack_seq:
@@ -334,20 +348,12 @@ class RawSocket:
                         self._send_one(ACK, "")
                         received_data.append(payload)
 
-                        # Reset the duplicate ACK counter
-                        dup_ack_counter = 0
-
-                        # Adjust the cwnd based on slow start or congestion avoidance
-                        if self.slow_start_flag:
-                            self.cwnd *= 2
-                            if self.cwnd >= self.ssthresh:
-                                self.slow_start_flag = False
-                        else:
-                            self.cwnd += 1
                 elif tcp_datagram.seq > self._ack_seq:  # Out-of-order packet received
+                    print('out of order')
                     packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
 
                 else:  # Duplicate packet received
+                    print('duplicate')
                     dup_ack_counter += 1
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
                         self._send_one(ACK, "")
@@ -356,13 +362,19 @@ class RawSocket:
                         dup_ack_counter = 0
 
             elif tcp_datagram.flags & FIN:
+                print('finish')
                 self._send_one(ACK, "")
                 break
+            
+            else:
+            
+                print(f'unknown pkt flags: {tcp_datagram.flags}')
 
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
+
 
 
 
