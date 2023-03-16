@@ -368,8 +368,9 @@ class RawSocket:
             
             else:
                 print(f'unknown pkt flags: {tcp_datagram.flags}')
+            total_payload = b''.join(received_data)
 
-            print(f'current lenght of recv {len(b''.join(received_data))}')
+            print(f'current lenght of recv {len(total_payload)}')
 
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
