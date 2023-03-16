@@ -320,7 +320,7 @@ class RawSocket:
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
                     self._ack_seq += len(tcp_datagram.payload)
-                    self._send_one(ACK, b"")
+                    self._send_one(ACK, "")
                     received_data.append(tcp_datagram.payload)
 
                     # Reset the duplicate ACK counter
@@ -338,13 +338,13 @@ class RawSocket:
                     dup_ack_counter += 1
 
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
-                        self._send_one(ACK, b"")
+                        self._send_one(ACK, "")
 
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
 
             elif tcp_datagram.flags & FIN:
-                self._send_one(ACK, b"")
+                self._send_one(ACK, "")
                 break
             
         total_payload = b''.join(received_data)     
