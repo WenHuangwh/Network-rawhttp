@@ -307,6 +307,7 @@ class RawSocket:
 
     def receive_all(self):
         received_data = []
+        recv_window = None
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
@@ -319,20 +320,29 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
-                    self._ack_seq += len(tcp_datagram.payload)
-                    self._send_one(ACK, "")
-                    received_data.append(tcp_datagram.payload)
+                    # Update the advertised window size from the server
+                    recv_window = tcp_datagram.adwind
 
-                    # Reset the duplicate ACK counter
-                    dup_ack_counter = 0
+                    # Check if the window size allows for more data
+                    if len(tcp_datagram.payload) <= recv_window:
+                        self._ack_seq += len(tcp_datagram.payload)
+                        self._send_one(ACK, "")
+                        received_data.append(tcp_datagram.payload)
+                        recv_window -= len(tcp_datagram.payload)
 
-                    # Adjust the cwnd based on slow start or congestion avoidance
-                    if self.slow_start_flag:
-                        self.cwnd *= 2
-                        if self.cwnd >= self.ssthresh:
-                            self.slow_start_flag = False
-                    else:
-                        self.cwnd += 1
+                        # Reset the duplicate ACK counter
+                        dup_ack_counter = 0
+
+                        # Adjust the cwnd based on slow start or congestion avoidance
+                        if self.slow_start_flag:
+                            self.cwnd *= 2
+                            if self.cwnd >= self.ssthresh:
+                                self.slow_start_flag = False
+                        else:
+                            self.cwnd += 1
+
+                    else:  # Ignore the packet if it exceeds the window size
+                        continue
 
                 else:  # Duplicate packet received
                     dup_ack_counter += 1
@@ -346,14 +356,14 @@ class RawSocket:
             elif tcp_datagram.flags & FIN:
                 self._send_one(ACK, "")
                 break
-            
-        total_payload = b''.join(received_data)     
+
+        total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
 
 
-    
+
 
 
 
@@ -369,7 +379,7 @@ class RawSocket:
         return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
 
     def unpack_tcp_header(self, packet):
-        TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload'])
+        TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
         tcp_header = unpack('!HHLLBBHHH', packet[20:40])
         src_port = tcp_header[0]
         dest_port = tcp_header[1]
@@ -381,7 +391,8 @@ class RawSocket:
         checksum = tcp_header[7]
         urgent_pointer = tcp_header[8]
         payload = packet[20 + header_length:]
-        return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload)
+        adwind = socket.ntohs(tcp_header[6])
+        return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload, adwind)
 
     def handshake(self):
         # send self.seq = 0
