@@ -305,9 +305,9 @@ class RawSocket:
     #     return body
 
 
+
     def receive_all(self):
         received_data = []
-        recv_window = None
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
@@ -320,29 +320,24 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
-                    # Update the advertised window size from the server
-                    recv_window = tcp_datagram.adwind
+                    self._ack_seq += len(tcp_datagram.payload)
+                    self._send_one(ACK, "")
+                    received_data.append(tcp_datagram.payload)
 
-                    # Check if the window size allows for more data
-                    if len(tcp_datagram.payload) <= recv_window:
-                        self._ack_seq += len(tcp_datagram.payload)
-                        self._send_one(ACK, "")
-                        received_data.append(tcp_datagram.payload)
-                        recv_window -= len(tcp_datagram.payload)
+                    # Reset the duplicate ACK counter
+                    dup_ack_counter = 0
 
-                        # Reset the duplicate ACK counter
-                        dup_ack_counter = 0
+                    # Adjust the cwnd based on slow start or congestion avoidance
+                    if self.slow_start_flag:
+                        self.cwnd *= 2
+                        if self.cwnd >= self.ssthresh:
+                            self.slow_start_flag = False
+                    else:
+                        self.cwnd += 1
 
-                        # Adjust the cwnd based on slow start or congestion avoidance
-                        if self.slow_start_flag:
-                            self.cwnd *= 2
-                            if self.cwnd >= self.ssthresh:
-                                self.slow_start_flag = False
-                        else:
-                            self.cwnd += 1
-
-                    else:  # Ignore the packet if it exceeds the window size
-                        continue
+                    # Check if the server's advertised window is smaller than the cwnd
+                    if tcp_datagram.adwind < self.cwnd:
+                        self.cwnd = tcp_datagram.adwind
 
                 else:  # Duplicate packet received
                     dup_ack_counter += 1
