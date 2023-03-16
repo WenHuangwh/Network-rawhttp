@@ -4,7 +4,8 @@ from urllib.parse import urlparse
 from struct import *
 from random import randint
 import time
-from collections import namedtuple
+from collections import namedtuple, deque
+
 
 SYN = 0x02   # 0b00000010
 ACK = 0x10   # 0b00010000
