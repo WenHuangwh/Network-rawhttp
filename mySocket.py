@@ -258,48 +258,96 @@ class RawSocket:
                 return tcp_datagram
         return None
 
+    # def receive_all(self):
+    #     received_data = []
+
+    #     while True:
+    #         # Receive a packet
+    #         tcp_datagram = self._receive_one()
+
+    #         # If no packet is received, continue waiting
+    #         if tcp_datagram is None:
+    #             continue
+
+    #         # Check if the received packet is an ACK with payload
+    #         if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
+    #             # Check the order of the packet
+    #             if tcp_datagram.seq == self._ack_seq:
+    #                 # Packet is in order, update the ack_seq
+    #                 self._ack_seq += len(tcp_datagram.payload)
+
+    #                 # Send ACK to the server
+    #                 self._send_one(ACK)
+
+    #                 # Append the payload to the received_data list
+    #                 received_data.append(tcp_datagram.payload)
+
+    #                 # Check if the received packet has the FIN flag set
+    #                 if tcp_datagram.flags & FIN:
+    #                     # Send ACK for the FIN flag
+    #                     self._ack_seq += 1
+    #                     self._send_one(ACK)
+    #                     break
+    #             else:
+    #                 # Out of order packet received
+    #                 print("Out of order packet received. Sending ACK with the expected sequence number...")
+    #                 self._send_one(ACK)
+
+    #         else:
+    #             print("Unexpected packet received. Waiting for data...")
+
+    #     # Combine received payloads
+    #     total_payload = b''.join(received_data)     
+
+    #     # Split the payload to remove the HTTP header
+    #     header, _, body = total_payload.partition(b'\r\n\r\n')
+
+    #     return body
+
+
     def receive_all(self):
         received_data = []
 
+        # Initialize the duplicate ACK counter
+        dup_ack_counter = 0
+
         while True:
-            # Receive a packet
             tcp_datagram = self._receive_one()
 
-            # If no packet is received, continue waiting
             if tcp_datagram is None:
                 continue
 
-            # Check if the received packet is an ACK with payload
             if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
-                # Check the order of the packet
                 if tcp_datagram.seq == self._ack_seq:
-                    # Packet is in order, update the ack_seq
                     self._ack_seq += len(tcp_datagram.payload)
-
-                    # Send ACK to the server
-                    self._send_one(ACK)
-
-                    # Append the payload to the received_data list
+                    self._send_one(ACK, b"")
                     received_data.append(tcp_datagram.payload)
 
-                    # Check if the received packet has the FIN flag set
-                    if tcp_datagram.flags & FIN:
-                        # Send ACK for the FIN flag
-                        self._ack_seq += 1
-                        self._send_one(ACK)
-                        break
-                else:
-                    # Out of order packet received
-                    print("Out of order packet received. Sending ACK with the expected sequence number...")
-                    self._send_one(ACK)
+                    # Reset the duplicate ACK counter
+                    dup_ack_counter = 0
 
-            else:
-                print("Unexpected packet received. Waiting for data...")
+                    # Adjust the cwnd based on slow start or congestion avoidance
+                    if self.slow_start_flag:
+                        self.cwnd *= 2
+                        if self.cwnd >= self.ssthresh:
+                            self.slow_start_flag = False
+                    else:
+                        self.cwnd += 1
 
-        # Combine received payloads
+                else:  # Duplicate packet received
+                    dup_ack_counter += 1
+
+                    if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
+                        self._send_one(ACK, b"")
+
+                        # Reset the duplicate ACK counter
+                        dup_ack_counter = 0
+
+            elif tcp_datagram.flags & FIN:
+                self._send_one(ACK, b"")
+                break
+            
         total_payload = b''.join(received_data)     
-
-        # Split the payload to remove the HTTP header
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
