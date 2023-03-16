@@ -319,6 +319,8 @@ class RawSocket:
         while True:
             tcp_datagram = self._receive_one()
 
+            print(f'seq: {self._seq}, ack_seq: {self._ack_seq}')
+
             if tcp_datagram is None:
                 continue
 
