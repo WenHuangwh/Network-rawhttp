@@ -43,8 +43,8 @@ class RawSocket:
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self.cwnd = 1
-            self.ssthresh=64*1024
-            self.rwnd = self.ssthresh
+            self.ssthresh = 64*1024
+            self.rwnd = 4096
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
@@ -352,6 +352,11 @@ class RawSocket:
                     print('out of order')
                     packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
 
+                elif tcp_datagram.flags & FIN:
+                    print('finish')
+                    self._send_one(ACK, "")
+                    break
+
                 else:  # Duplicate packet received
                     print('duplicate')
                     dup_ack_counter += 1
@@ -361,10 +366,7 @@ class RawSocket:
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
 
-            elif tcp_datagram.flags & FIN:
-                print('finish')
-                self._send_one(ACK, "")
-                break
+            self.rwnd = max(0, 4096 - len(packet_queue))
             
             else:
                 print(f'unknown pkt flags: {tcp_datagram.flags}')
