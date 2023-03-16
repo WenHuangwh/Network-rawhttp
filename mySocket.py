@@ -352,12 +352,7 @@ class RawSocket:
                     print('out of order')
                     packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
 
-                elif tcp_datagram.flags & FIN:
-                    print('finish')
-                    self._send_one(ACK, "")
-                    break
-
-                else:  # Duplicate packet received
+                elif tcp_datagram.seq < self._ack_seq:  # Duplicate packet received
                     print('duplicate')
                     dup_ack_counter += 1
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
@@ -366,10 +361,18 @@ class RawSocket:
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
 
+                elif tcp_datagram.flags & FIN:
+                    print('finish')
+                    self._send_one(ACK, "")
+                    break
+
+            elif tcp_datagram.flags & FIN:
+                print('finish')
+                self._send_one(ACK, "")
+                break
+
             self.rwnd = max(0, 4096 - len(packet_queue))
             
-            else:
-                print(f'unknown pkt flags: {tcp_datagram.flags}')
             total_payload = b''.join(received_data)
 
             print(f'current lenght of recv {len(total_payload)}')
