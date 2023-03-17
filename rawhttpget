@@ -67,7 +67,7 @@ def main():
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
 
     rawSocket.send(request)
-    payload = rawSocket.receive_all()
+    payload = rawSocket.receive_all2()
 
     # Save the payload to a .log file
     with open(filename, "wb") as log_file:
