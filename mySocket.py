@@ -327,7 +327,7 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
 
-                if tcp_datagram.seq > self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit and self._ack_seq not in buffer: 
+                if tcp_datagram.seq >= self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit and self._ack_seq not in buffer: 
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                     buffer_size += len(tcp_datagram.payload)
                     # Reset the duplicate ACK counter
