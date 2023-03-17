@@ -85,6 +85,7 @@ class RawSocket:
         ip_saddr = socket.inet_aton(self._srcIpAddr)
         ip_daddr = socket.inet_aton(self._destIpAddr)
         ip_ihl_ver = (ip_ver << 4) + ip_ihl
+        print(f"{ip_ihl_ver}, {ip_tos}, {ip_tot_len}, {ip_id}, {ip_frag_off}, {ip_ttl}, {ip_proto}, {ip_check}, {ip_saddr}, {ip_daddr}")
         ip_header = pack('!BBHHHBBH4s4s', ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
         return ip_header
             
