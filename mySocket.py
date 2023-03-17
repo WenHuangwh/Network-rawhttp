@@ -339,10 +339,13 @@ class RawSocket:
 
             if tcp_datagram.flags & FIN != 0:
                 print("FIN received")
-                buffer[tcp_datagram.seq] = tcp_datagram.payload
-                buffer_size += len(tcp_datagram.payload)
+                payload_len = len(tcp_datagram.payload)
+                if payload_len != 0:
+                    buffer[tcp_datagram.seq] = tcp_datagram.payload 
+                buffer_size += payload_len
+                # Reset the duplicate ACK counter
                 receive_fin = True
-                data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+                data_is_complete_seq = tcp_datagram.seq + payload_len
                 print(f"seq: {tcp_datagram.seq}")
                 print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")
 
@@ -356,9 +359,11 @@ class RawSocket:
                     dup_ack_counter = 0
                 # Process packets in the correct order from the priority queue
 
-            elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit: 
-                buffer[tcp_datagram.seq] = tcp_datagram.payload 
-                buffer_size += len(tcp_datagram.payload)
+            elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit:
+                payload_len = len(tcp_datagram.payload)
+                if payload_len != 0:
+                    buffer[tcp_datagram.seq] = tcp_datagram.payload 
+                buffer_size += payload_len
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
                 
@@ -370,12 +375,13 @@ class RawSocket:
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
+                print("loop mark1")
 
             print(f"com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")               
             
             total_payload = b''.join(received_data)
 
-            print(f'current lenght of recv {self._ack_seq / 1024 / 1024}')
+            print(f'Loop mark2: current lenght of recv {self._ack_seq / 1024 / 1024}')
 
         # Send ACK respond to FIN
         self._ack_seq += 1
