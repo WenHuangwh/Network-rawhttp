@@ -336,8 +336,8 @@ class RawSocket:
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
 
-            if not tcp_datagram.flags & PSH_ACK:
-                continue
+            # if not tcp_datagram.flags & PSH_ACK:
+            #     continue
 
             # Duplicate packet received
             elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
