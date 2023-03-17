@@ -42,7 +42,7 @@ class RawSocket:
             self.ssthresh = 64*1024
             self.rwnd = 64 * 1024
             # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (20480)
+            self.tcp_adwind = socket.htons (64 * 1024)
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
@@ -327,6 +327,7 @@ class RawSocket:
                     # Process the received packet
                     self._ack_seq += len(tcp_datagram.payload)
                     self.rwnd = max(1, buffer_limit - buffer_size)
+                    self.tcp_adwind = socket.htons(self.rwnd)
                     self._send_one(ACK, "")
                     received_data.append(tcp_datagram.payload)
 
@@ -342,6 +343,7 @@ class RawSocket:
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
                         self.rwnd = max(1, buffer_limit - buffer_size)
+                        self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
                 
                 # Duplicate packet received
