@@ -485,33 +485,33 @@ class RawSocket:
         print("Error closing connection")
         return False
 
-    def verify_tcp_checksum(self, source_ip, dest_ip, tcp_header, payload, tcp_checksum):
-        pseudo_header = pack('!4s4sBBH',
-                            socket.inet_aton(source_ip),
-                            socket.inet_aton(dest_ip),
-                            0,
-                            socket.IPPROTO_TCP,
-                            len(tcp_header) + len(payload))
-
-        padding = b'\x00' if len(payload) % 2 == 1 else b''
-        padded_payload = payload + padding
-
-        total_data = pseudo_header + tcp_header + padded_payload
-
-        def accumulate(acc, chunk):
-            return acc + (chunk[0] << 8) + chunk[1]
+    def verify_tcp_checksum(src_ip, dest_ip, tcp_header, tcp_payload, tcp_checksum):
+        def accumulate(accumulator, chunk):
+            return accumulator + (chunk >> 8) + (chunk & 0xff)
 
         def carry_around_add(a, b):
             c = a + b
             return (c & 0xffff) + (c >> 16)
 
-        def from_data_to_chunks(data):
-            return [data[i:i + 2] for i in range(0, len(data), 2)]
+        # Convert IP addresses to integers
+        src_ip = int.from_bytes(socket.inet_aton(src_ip), byteorder='big')
+        dest_ip = int.from_bytes(socket.inet_aton(dest_ip), byteorder='big')
 
-        data_chunks = from_data_to_chunks(total_data)
+        # Create pseudo header
+        pseudo_header = struct.pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
 
+        # Pad TCP payload if necessary
+        if len(tcp_payload) % 2 == 1:
+            tcp_payload += b'\x00'
+
+        # Concatenate pseudo header, TCP header, and TCP payload
+        data = pseudo_header + tcp_header + tcp_payload
+
+        # Group the data into 16-bit chunks
+        data_chunks = [int.from_bytes(data[i:i + 2], byteorder='big') for i in range(0, len(data), 2)]
+
+        # Calculate the checksum
         total = reduce(carry_around_add, map(accumulate, data_chunks))
-
         return ~total & 0xffff == tcp_checksum
 
 
