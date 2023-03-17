@@ -242,7 +242,7 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(self.dest_ipAddr, self.src_ipAddr, tcp_header, tcp_payload, tcp_datagram.checksum):
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(self._destIpAddr, self._srcIpAddr, tcp_header, tcp_payload, tcp_datagram.checksum):
             return False
         return True
 
