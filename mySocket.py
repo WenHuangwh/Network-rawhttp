@@ -38,13 +38,13 @@ class RawSocket:
             self.ip_id = 1
             
             # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (5840)
+            self.tcp_adwind = socket.htons (self.rwnd)
             
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self.cwnd = 1
             self.ssthresh = 64*1024
-            self.rwnd = 4096
+            self.rwnd = 64 * 1024
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
@@ -307,14 +307,13 @@ class RawSocket:
 
 
 
-    def receive_all(self):
+    def receive_all(self, buffer_limit = 64*1024):
         received_data = []
+        buffer = {}
+        buffer_size = 0
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
-
-        # Initialize the priority queue
-        packet_queue = PriorityQueue()
 
         while True:
             tcp_datagram = self._receive_one()
@@ -326,7 +325,6 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
                 if tcp_datagram.seq == self._ack_seq:
-                    print('right')
                     # Process the received packet
                     self._ack_seq += len(tcp_datagram.payload)
                     self._send_one(ACK, "")
@@ -335,26 +333,18 @@ class RawSocket:
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
 
-                    # Adjust the cwnd based on slow start or congestion avoidance
-                    if self.slow_start_flag:
-                        self.cwnd *= 2
-                        if self.cwnd >= self.ssthresh:
-                            self.slow_start_flag = False
-                    else:
-                        self.cwnd += 1
-
                     # Process packets in the correct order from the priority queue
-                    while not packet_queue.is_empty() and packet_queue.queue[0][0] == self._ack_seq:
-                        payload = packet_queue.pop()
-                        self._ack_seq += len(payload)
-                        self._send_one(ACK, "")
+                    while buffer[self._ack_seq] != None:
+                        payload = buffer[self._ack_seq]
                         received_data.append(payload)
-
-                elif tcp_datagram.seq > self._ack_seq:  # Out-of-order packet received
-                    print('out of order')
-                    packet_queue.push(tcp_datagram.seq, tcp_datagram.payload)
-
-                elif tcp_datagram.seq < self._ack_seq:  # Duplicate packet received
+                        payload_len = len(payload)
+                        del(bufferbuffer[self._ack_seq])
+                        buffer_size -= payload_len
+                        self._ack_seq += payload_len
+                        self._send_one(ACK, "")
+                
+                # Duplicate packet received
+                elif tcp_datagram.seq < self._ack_seq or buffer[self._ack_seq] != None:  
                     print('duplicate')
                     dup_ack_counter += 1
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
@@ -362,6 +352,12 @@ class RawSocket:
 
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
+
+                # Out-of-order packet received within Receiver window size
+                elif tcp_datagram.seq > self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit:  
+                    print('out of order')
+                    buffer[tcp_datagram.seq] = tcp_datagram.payload
+                    buffer_size += len(tcp_datagram.payload)
 
                 elif tcp_datagram.flags & FIN:
                     print('finish')
@@ -373,7 +369,9 @@ class RawSocket:
                 self._send_one(ACK, "")
                 break
 
-            self.rwnd = max(0, 4096 - len(packet_queue))
+            self.rwnd = max(0, buffer_limit - buffer_size)
+
+            self.adwind = self.rwnd
             
             total_payload = b''.join(received_data)
 
