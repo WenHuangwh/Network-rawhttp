@@ -357,7 +357,7 @@ class RawSocket:
 
             elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
                     # Process the payload if present
-                if len(tcp_datagram.payload) > 0 and tcp_datagram.seq == self._ack_seq::
+                if len(tcp_datagram.payload) > 0 and tcp_datagram.seq == self._ack_seq:
                     received_data.append(tcp_datagram.payload)
                     self._ack_seq += len(tcp_datagram.payload)
                     self._ack_seq %= 0x100000000
