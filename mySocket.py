@@ -35,16 +35,14 @@ class RawSocket:
             # Sets the initial TCP acknowledgement sequence number to 0.
             self._ack_seq = 0
 
-            self.ip_id = 1
-            
-            # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (self.rwnd)
-            
+            self.ip_id = 1    
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self.cwnd = 1
             self.ssthresh = 64*1024
             self.rwnd = 64 * 1024
+            # Sets the initial TCP advertised window size to 20480 bytes.
+            self.tcp_adwind = socket.htons (self.rwnd)
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
