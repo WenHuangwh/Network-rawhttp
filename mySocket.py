@@ -78,6 +78,7 @@ class RawSocket:
         ip_tot_len = 0
         ip_id = self.ip_id
         self.ip_id += 1
+        self.ip_id %= 65535
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
@@ -327,6 +328,7 @@ class RawSocket:
                 if tcp_datagram.seq == self._ack_seq:
                     # Process the received packet
                     self._ack_seq += len(tcp_datagram.payload)
+                    self._ack_seq %= 0x100000000
                     self.rwnd = max(1, buffer_limit - buffer_size)
                     # self.tcp_adwind = socket.htons(self.rwnd)
                     print(f"rwnd: {self.rwnd}")
@@ -344,6 +346,7 @@ class RawSocket:
                         del(buffer[self._ack_seq])
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
+                        self._ack_seq %= 0x100000000
                         self.rwnd = max(1, buffer_limit - buffer_size)
                         # self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
