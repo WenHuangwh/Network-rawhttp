@@ -495,7 +495,7 @@ class RawSocket:
         dest_ip = int.from_bytes(socket.inet_aton(dest_ip), byteorder='big')
 
         # Create pseudo header
-        pseudo_header = struct.pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
+        pseudo_header = pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
 
         # Pad TCP payload if necessary
         if len(tcp_payload) % 2 == 1:
