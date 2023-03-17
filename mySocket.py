@@ -242,7 +242,8 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(self._destIpAddr, self._srcIpAddr, tcp_header, tcp_payload, tcp_datagram.checksum):
+        tcp_header_with_payload = packet[20:]
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_checksum):
             return False
         return True
 
@@ -485,35 +486,28 @@ class RawSocket:
         print("Error closing connection")
         return False
 
-    def verify_tcp_checksum(self, src_ip, dest_ip, tcp_header, tcp_payload, tcp_checksum):
-        def carry_around_add(a, b):
-            c = a + b
-            return (c & 0xffff) + (c >> 16)
+    def verify_tcp_checksum(self, addr, length, tcp_checksum):
+        nleft = length
+        total_sum = 0
+        index = 0
 
-        # Convert IP addresses to integers
-        src_ip = int.from_bytes(socket.inet_aton(src_ip), byteorder='big')
-        dest_ip = int.from_bytes(socket.inet_aton(dest_ip), byteorder='big')
+        while nleft > 1:
+            total_sum += int.from_bytes(addr[index:index+2], byteorder='big')
+            index += 2
+            nleft -= 2
 
-        # Create pseudo header
-        pseudo_header = pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
+        if nleft == 1:
+            answer = int.from_bytes(addr[index:index+1], byteorder='big')
+            total_sum += answer
 
-        # Pad TCP payload if necessary
-        if len(tcp_payload) % 2 == 1:
-            tcp_payload += b'\x00'
-
-        # Concatenate pseudo header, TCP header, and TCP payload
-        data = pseudo_header + tcp_header + tcp_payload
-
-        # Calculate the checksum
-        total = 0
-        for i in range(0, len(data), 2):
-            total = carry_around_add(total, int.from_bytes(data[i:i+2], byteorder='big'))
-        is_valid = ~total & 0xffff == tcp_checksum
-        if not is_valid:
-            print(f"right: {tcp_checksum}, cal: {~total & 0xffff}")
+        total_sum = (total_sum >> 16) + (total_sum & 0xFFFF)
+        total_sum += (total_sum >> 16)
+        answer = ~total_sum & 0xFFFF
+        if answer == tcp_checksum:
+            print("Right TCP")
         else:
-            print("Valid TCP cks")
-        return ~total & 0xffff == tcp_checksum
+            print(f"Header: {tcp_checksum}, Cal: {answer}")
+        return answer == tcp_checksum
 
 
    
