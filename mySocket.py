@@ -14,6 +14,7 @@ SYN_ACK = 0x12   # 0b00010010
 FIN = 0x01   # 0b00000001
 FIN_ACK = 0x11   # 0b00010001
 PSH_ACK = 0x18   # 0b00011000
+FIN_PSH_ACK = 0x19 # 0b00011001
 
 class RawSocket:
 
@@ -330,7 +331,7 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            if tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
+            if tcp_datagram.flags & FIN or tcp_datagram.flags & FIN_PSH_ACK:
                 buffer[tcp_datagram.seq] = tcp_datagram.payload
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
