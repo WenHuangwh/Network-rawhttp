@@ -343,6 +343,8 @@ class RawSocket:
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
                 data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
+                print(f"seq: {tcp_datagram.seq}")
+                print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self.ack_seq}")
 
             # Duplicate packet received
             elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
@@ -367,7 +369,9 @@ class RawSocket:
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
-                self._send_one(ACK, "")                
+                self._send_one(ACK, "") 
+
+            print(f"com_seq: {data_is_complete_seq}, my_ack: {self.ack_seq}")               
             
             total_payload = b''.join(received_data)
 
