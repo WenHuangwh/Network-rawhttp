@@ -351,7 +351,7 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
 
-            elif tcp_datagram.flags & FIN:
+            elif tcp_datagram.flags & FIN == FIN:
                 print("FIN received")
                 buffer[tcp_datagram.seq] = tcp_datagram.payload
                 buffer_size += len(tcp_datagram.payload)
