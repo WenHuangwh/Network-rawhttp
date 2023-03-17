@@ -260,7 +260,7 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all1(self):
+    def receive_all(self):
         received_data = []
 
         while True:
@@ -313,7 +313,7 @@ class RawSocket:
 
 
 
-    def receive_all(self, buffer_limit = 65535):
+    def receive_all1(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
