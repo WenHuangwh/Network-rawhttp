@@ -317,6 +317,8 @@ class RawSocket:
         received_data = []
         buffer = {}
         buffer_size = 0
+
+        start_seq = self._ack_seq
         
         data_is_complete_seq = self._ack_seq + 1
 
@@ -360,9 +362,7 @@ class RawSocket:
                 
             while self._ack_seq in buffer:
                 payload = buffer[self._ack_seq]
-                received_data.append(payload)
                 payload_len = len(payload)
-                del(buffer[self._ack_seq])
                 buffer_size -= payload_len
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
@@ -375,7 +375,12 @@ class RawSocket:
 
         # Send ACK respond to FIN
         self._ack_seq += 1
-        self._send_one(ACK, "")            
+        self._send_one(ACK, "")
+
+        while start_seq in buffer:
+            received_data.append(buffer[start_seq])
+            start_seq += len(buffer[start_seq])
+
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
