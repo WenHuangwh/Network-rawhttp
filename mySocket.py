@@ -260,7 +260,7 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all(self):
+    def receive_all1(self):
         received_data = []
 
         while True:
@@ -371,7 +371,7 @@ class RawSocket:
             
             total_payload = b''.join(received_data)
 
-            print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
+            print(f'current lenght of recv {self._ack_seq / 1024 / 1024}')
 
         # Send ACK respond to FIN
         self._ack_seq += 1
