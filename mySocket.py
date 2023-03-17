@@ -356,8 +356,8 @@ class RawSocket:
                     self._send_one(ACK, "")
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
-                # Process packets in the correct order from the priority queue
 
+            # Store valid packets in buffer
             elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit:
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
@@ -366,6 +366,7 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
                 
+            # Update ack_seq and send messge to server
             while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
                 payload = buffer[self._ack_seq]
                 payload_len = len(payload)
@@ -374,7 +375,6 @@ class RawSocket:
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
-                print("loop mark1")
 
         # Send ACK respond to FIN
         self._ack_seq += 1
@@ -462,25 +462,25 @@ class RawSocket:
         return False
 
     def close(self):
-        # Send a FIN packet to initiate the connection teardown process
+        # Send FIN packet to the server
         self._send_one(FIN, "")
-        # Increment the sequence number after sending the FIN packet
-        self._seq += 1
 
-        # Wait for an ACK packet from the server
-        tcp_datagram = self._receive_one()
-        if tcp_datagram is not None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == ACK:
-            # Received ACK for our FIN packet, now wait for the server's FIN packet
+        # Wait for the server's FIN packet
+        while True:
             tcp_datagram = self._receive_one()
-            if tcp_datagram is not None and (tcp_datagram.flags & FIN) == FIN:
-                # Received FIN packet from the server, update the acknowledgment number
-                self._ack_seq = tcp_datagram.seq + 1
-                # Send the final ACK packet to complete the four-way teardown process
+            if tcp_datagram is None:
+                continue
+
+            if tcp_datagram.flags & FIN:
+                # Send ACK packet to acknowledge the server's FIN packet
+                self._ack_seq += 1
                 self._send_one(ACK, "")
-                print("Connection closed")
-                return True
-        print("Error closing connection")
-        return False
+                break
+
+        # Close the socket
+        self.send_socket.close()
+        self.recv_socket.close()
+
 
     def verify_tcp_checksum(self, addr, length, tcp_checksum):
         nleft = length
