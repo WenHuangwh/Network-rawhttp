@@ -371,7 +371,7 @@ class RawSocket:
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
 
-            print(f"com_seq: {data_is_complete_seq}, my_ack: {self.ack_seq}")               
+            print(f"com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")               
             
             total_payload = b''.join(received_data)
 
