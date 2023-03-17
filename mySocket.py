@@ -513,6 +513,9 @@ class RawSocket:
         # Calculate the checksum
         total = 0
         total = reduce(carry_around_add, map(lambda chunk: accumulate(total, chunk), data_chunks))
+        is_valid = ~total & 0xffff == tcp_checksum
+        if not is_valid:
+            print(f"right: {tcp_checksum}, cal: {~total & 0xffff}")
         return ~total & 0xffff == tcp_checksum
 
 
