@@ -342,7 +342,7 @@ class RawSocket:
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
                         self._ack_seq %= 0x100000000
-                        # self.rwnd = max(1, buffer_limit - buffer_size)
+                        self.rwnd = max(1, buffer_limit - buffer_size)
                         # self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
                 
