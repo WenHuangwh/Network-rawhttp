@@ -332,7 +332,7 @@ class RawSocket:
                     dup_ack_counter = 0
 
                     # Process packets in the correct order from the priority queue
-                    while buffer[self._ack_seq] != None:
+                    while self._ack_seq in buffer:
                         payload = buffer[self._ack_seq]
                         received_data.append(payload)
                         payload_len = len(payload)
@@ -342,7 +342,7 @@ class RawSocket:
                         self._send_one(ACK, "")
                 
                 # Duplicate packet received
-                elif tcp_datagram.seq < self._ack_seq or buffer[self._ack_seq] != None:  
+                elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
                     print('duplicate')
                     dup_ack_counter += 1
                     if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
