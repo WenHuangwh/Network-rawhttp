@@ -500,9 +500,11 @@ class RawSocket:
         is_valid = (calculated_checksum == original_checksum)
 
         if not is_valid:
-            print(bytes_packet.hex())
+            # print(bytes_packet.hex())
             print(f"Original TCP checksum: {original_checksum}")
             print(f"Calculated TCP checksum: {calculated_checksum}")
+        else:
+            print("Valid TCP")
         return is_valid
 
 
