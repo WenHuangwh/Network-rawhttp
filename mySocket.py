@@ -271,7 +271,7 @@ class RawSocket:
                 continue
 
             # Check if the received packet is an ACK with payload
-            if tcp_datagram.flags & PSH_ACK and tcp_datagram.ack_seq == self._seq:
+            if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
                 # Check the order of the packet
                 if tcp_datagram.seq == self._ack_seq:
                     # Packet is in order, update the ack_seq
@@ -293,7 +293,11 @@ class RawSocket:
                     # Out of order packet received
                     print("Out of order packet received. Sending ACK with the expected sequence number...")
                     self._send_one(ACK)
-
+                    
+            elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
+                print('finish')
+                self._send_one(ACK, "")
+                break
             else:
                 print("Unexpected packet received. Waiting for data...")
 
