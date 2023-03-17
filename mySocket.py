@@ -327,7 +327,7 @@ class RawSocket:
                     # Process the received packet
                     self._ack_seq += len(tcp_datagram.payload)
                     self.rwnd = max(1, buffer_limit - buffer_size)
-                    self.tcp_adwind = socket.htons(self.rwnd)
+                    # self.tcp_adwind = socket.htons(self.rwnd)
                     print(f"rwnd: {self.rwnd}")
                     self._send_one(ACK, "")
                     received_data.append(tcp_datagram.payload)
@@ -344,7 +344,7 @@ class RawSocket:
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
                         self.rwnd = max(1, buffer_limit - buffer_size)
-                        self.tcp_adwind = socket.htons(self.rwnd)
+                        # self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
                 
                 # Duplicate packet received
