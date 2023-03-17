@@ -260,7 +260,7 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all(self):
+    def receive_all1(self):
         received_data = []
 
         while True:
@@ -313,7 +313,7 @@ class RawSocket:
 
 
 
-    def receive_all1(self, buffer_limit = 65535):
+    def receive_all2(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
@@ -335,17 +335,8 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            if tcp_datagram.flags & FIN or tcp_datagram.flags & FIN_PSH_ACK:
-                buffer[tcp_datagram.seq] = tcp_datagram.payload
-                buffer_size += len(tcp_datagram.payload)
-                receive_fin = True
-                data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
-
-            if not tcp_datagram.flags & PSH_ACK:
-                continue
-
             # Duplicate packet received
-            elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
+            if tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
                 print('duplicate')
                 dup_ack_counter += 1
                 if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
@@ -359,6 +350,13 @@ class RawSocket:
                 buffer_size += len(tcp_datagram.payload)
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
+
+            elif tcp_datagram.flags & FIN:
+                print("FIN received")
+                buffer[tcp_datagram.seq] = tcp_datagram.payload
+                buffer_size += len(tcp_datagram.payload)
+                receive_fin = True
+                data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
                 
             while self._ack_seq in buffer:
                 payload = buffer[self._ack_seq]
