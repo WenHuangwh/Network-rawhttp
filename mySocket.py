@@ -335,7 +335,7 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            if tcp_datagram.flags & FIN:
+            if tcp_datagram.flags & FIN or tcp_datagram.flags == FIN_PSH_ACK:
                 buffer[tcp_datagram.seq] = tcp_datagram.payload
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
