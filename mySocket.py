@@ -376,12 +376,6 @@ class RawSocket:
                 self._send_one(ACK, "") 
                 print("loop mark1")
 
-            print(f"com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")               
-            
-            total_payload = b''.join(received_data)
-
-            print(f'Loop mark2: current lenght of recv {self._ack_seq / 1024 / 1024}')
-
         # Send ACK respond to FIN
         self._ack_seq += 1
         self._send_one(FIN_ACK, "")
