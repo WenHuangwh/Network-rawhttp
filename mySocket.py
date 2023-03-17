@@ -393,7 +393,7 @@ class RawSocket:
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
-        return body, header
+        return header, body
 
     # def unpack_ip_packet(self, packet):
     #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
