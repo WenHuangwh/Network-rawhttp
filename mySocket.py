@@ -259,7 +259,7 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all(self):
+    def receive_all1(self):
         received_data = []
 
         while True:
@@ -311,7 +311,7 @@ class RawSocket:
 
 
 
-    def receive_all1(self, buffer_limit = 65535):
+    def receive_all(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
@@ -342,7 +342,7 @@ class RawSocket:
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
                         self._ack_seq %= 0x100000000
-                        self.rwnd = max(1, buffer_limit - buffer_size)
+                        # self.rwnd = max(1, buffer_limit - buffer_size)
                         # self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
                 
@@ -368,7 +368,7 @@ class RawSocket:
             
             total_payload = b''.join(received_data)
 
-            # print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
+            print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
 
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
