@@ -320,7 +320,7 @@ class RawSocket:
 
         start_seq = self._ack_seq
         
-        data_is_complete_seq = -1
+        data_is_complete_seq = 0x100000000 + 1
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
