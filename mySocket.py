@@ -293,18 +293,18 @@ class RawSocket:
                     # Out of order packet received
                     print("Out of order packet received. Sending ACK with the expected sequence number...")
                     self._send_one(ACK)
-                    
+
             elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
                 print('finish')
                 self._send_one(ACK, "")
                 break
             else:
                 print("Unexpected packet received. Waiting for data...")
+            total_payload = b''.join(received_data)
 
-        # Combine received payloads
-        total_payload = b''.join(received_data)     
+            # print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
 
-        # Split the payload to remove the HTTP header
+        total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
