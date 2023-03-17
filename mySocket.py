@@ -78,7 +78,7 @@ class RawSocket:
         ip_tot_len = 0
         ip_id = self.ip_id
         self.ip_id += 1
-        self.ip_id %= 65535
+        self.ip_id %= 65536
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
