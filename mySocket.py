@@ -386,6 +386,8 @@ class RawSocket:
         self._ack_seq += 1
         self._send_one(FIN_ACK, "")
 
+        received_data = []
+
         while start_seq in buffer:
             received_data.append(buffer[start_seq])
             start_seq += len(buffer[start_seq])
