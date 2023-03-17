@@ -312,66 +312,66 @@ class RawSocket:
 
 
 
-    def receive_all1(self, buffer_limit = 65535):
+    def receive_all(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
+        receive_fin = False
 
-        while True:
+        while not receive_fin:
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
                 continue
 
-            if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
+            if tcp_datagram.ack_seq != self._seq:
+                continue
 
-                if tcp_datagram.seq >= self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit and self._ack_seq not in buffer: 
-                    buffer[tcp_datagram.seq] = tcp_datagram.payload 
-                    buffer_size += len(tcp_datagram.payload)
+            if tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
+                buffer[tcp_datagram.seq] = tcp_datagram.payload
+                buffer_size += len(tcp_datagram.payload)
+                receive_fin = True
+
+            if not tcp_datagram.flags & PSH_ACK:
+                continue
+
+            # Duplicate packet received
+            elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
+                print('duplicate')
+                dup_ack_counter += 1
+                if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
+                    self._send_one(ACK, "")
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
+                # Process packets in the correct order from the priority queue
 
-                    # Process packets in the correct order from the priority queue
-                    while self._ack_seq in buffer:
-                        payload = buffer[self._ack_seq]
-                        received_data.append(payload)
-                        payload_len = len(payload)
-                        del(buffer[self._ack_seq])
-                        buffer_size -= payload_len
-                        self._ack_seq += payload_len
-                        self._ack_seq %= 0x100000000
-                        self.rwnd = max(1, buffer_limit - buffer_size)
-                        self._send_one(ACK, "")
+            elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit: 
+                buffer[tcp_datagram.seq] = tcp_datagram.payload 
+                buffer_size += len(tcp_datagram.payload)
+                # Reset the duplicate ACK counter
+                dup_ack_counter = 0
                 
-                # Duplicate packet received
-                elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
-                    print('duplicate')
-                    dup_ack_counter += 1
-                    if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
-                        self._send_one(ACK, "")
-
-                        # Reset the duplicate ACK counter
-                        dup_ack_counter = 0
-
-            elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
-                    # Process the payload if present
-                if len(tcp_datagram.payload) > 0 and tcp_datagram.seq == self._ack_seq:
-                    received_data.append(tcp_datagram.payload)
-                    self._ack_seq += len(tcp_datagram.payload)
-                    self._ack_seq %= 0x100000000
-                # Increment the ack_seq by 1 to acknowledge the FIN flag
-                self._ack_seq += 1
+            while self._ack_seq in buffer:
+                payload = buffer[self._ack_seq]
+                received_data.append(payload)
+                payload_len = len(payload)
+                del(buffer[self._ack_seq])
+                buffer_size -= payload_len
+                self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
-                self._send_one(ACK, "")
-                break
+                self.rwnd = max(1, buffer_limit - buffer_size)
+                self._send_one(ACK, "")                
             
             total_payload = b''.join(received_data)
 
             print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
 
+        # Send ACK respond to FIN
+        self._ack_seq += 1
+        self._send_one(ACK, "")            
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
