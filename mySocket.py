@@ -259,7 +259,7 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all1(self):
+    def receive_all(self):
         received_data = []
 
         while True:
@@ -296,6 +296,7 @@ class RawSocket:
 
             elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
                 print('finish')
+                self._ack_seq += 1
                 self._send_one(ACK, "")
                 break
             else:
@@ -311,7 +312,7 @@ class RawSocket:
 
 
 
-    def receive_all(self, buffer_limit = 65535):
+    def receive_all1(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
