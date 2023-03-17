@@ -233,8 +233,8 @@ class RawSocket:
     # Recv
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
-        ip_datagram, tcp_header, tcp_payload = self.unpack_ip_header(packet)
-        tcp_datagram = self.unpack_tcp_header(packet)
+        ip_datagram, tcp_header, tcp_payload = self.unpack_ip_packet(packet)
+        tcp_datagram = self.unpack_tcp_packet(packet)
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
             # print("Invalid ip address")
             return False
@@ -254,8 +254,8 @@ class RawSocket:
             if len(received_pkt) == 0:
                 continue
             if self.check_incomingPKT(received_pkt):
-                ip_datagram = self.unpack_ip_header(received_pkt)
-                tcp_datagram = self.unpack_tcp_header(received_pkt)
+                ip_datagram = self.unpack_ip_packet(received_pkt)
+                tcp_datagram = self.unpack_tcp_packet(received_pkt)
                 return tcp_datagram
         return None
 
@@ -394,7 +394,7 @@ class RawSocket:
 
         return body
 
-    # def unpack_ip_header(self, packet):
+    # def unpack_ip_packet(self, packet):
     #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
     #     ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
     #     version = ip_header[0] >> 4
@@ -432,7 +432,7 @@ class RawSocket:
         return ip_header_info, tcp_header, tcp_payload
 
 
-    def unpack_tcp_header(self, packet):
+    def unpack_tcp_packet(self, packet):
         TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
         tcp_header = unpack('!HHLLBBHHH', packet[20:40])
         src_port = tcp_header[0]
