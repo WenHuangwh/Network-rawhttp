@@ -367,7 +367,7 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
                 
-            while self._ack_seq in buffer and data_is_complete_seq != self._ack_seq:
+            while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
                 payload = buffer[self._ack_seq]
                 payload_len = len(payload)
                 buffer_size -= payload_len
