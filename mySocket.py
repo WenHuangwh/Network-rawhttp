@@ -243,7 +243,7 @@ class RawSocket:
             return False
         # All checks passed, return True
         tcp_header_with_payload = packet[20:]
-        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_checksum):
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_datagram.checksum):
             return False
         return True
 
