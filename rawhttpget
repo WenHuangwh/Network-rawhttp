@@ -67,7 +67,11 @@ def main():
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"
 
     rawSocket.send(request)
-    payload = rawSocket.receive_all2()
+    header, payload = rawSocket.receive_all2()
+
+    if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
+        print("HTTP header error")
+        return
 
     # Save the payload to a .log file
     with open(filename, "wb") as log_file:

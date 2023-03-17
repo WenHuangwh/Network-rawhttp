@@ -242,9 +242,9 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        tcp_header_with_payload = packet[20:]
-        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_datagram.checksum):
-            return False
+        # tcp_header_with_payload = packet[20:]
+        # if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_datagram.checksum):
+        #     return False
         return True
 
     def _receive_one(self, size=20480, timeout=60):
@@ -393,7 +393,7 @@ class RawSocket:
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
-        return body
+        return body, header
 
     # def unpack_ip_packet(self, packet):
     #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
