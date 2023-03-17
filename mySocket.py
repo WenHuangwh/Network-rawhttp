@@ -86,7 +86,7 @@ class RawSocket:
         ip_saddr = socket.inet_aton(self._srcIpAddr)
         ip_daddr = socket.inet_aton(self._destIpAddr)
         ip_ihl_ver = (ip_ver << 4) + ip_ihl
-        print(f"{ip_ihl_ver}, {ip_tos}, {ip_tot_len}, {ip_id}, {ip_frag_off}, {ip_ttl}, {ip_proto}, {ip_check}, {ip_saddr}, {ip_daddr}")
+        # print(f"{ip_ihl_ver}, {ip_tos}, {ip_tot_len}, {ip_id}, {ip_frag_off}, {ip_ttl}, {ip_proto}, {ip_check}, {ip_saddr}, {ip_daddr}")
         ip_header = pack('!BBHHHBBH4s4s', ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
         return ip_header
             
@@ -318,8 +318,6 @@ class RawSocket:
         while True:
             tcp_datagram = self._receive_one()
 
-            print(f'seq: {self._seq}, ack_seq: {self._ack_seq}')
-
             if tcp_datagram is None:
                 continue
 
@@ -331,7 +329,6 @@ class RawSocket:
                     self._ack_seq %= 0x100000000
                     self.rwnd = max(1, buffer_limit - buffer_size)
                     # self.tcp_adwind = socket.htons(self.rwnd)
-                    print(f"rwnd: {self.rwnd}")
                     self._send_one(ACK, "")
                     received_data.append(tcp_datagram.payload)
 
