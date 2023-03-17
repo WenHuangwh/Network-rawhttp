@@ -332,6 +332,8 @@ class RawSocket:
             if tcp_datagram is None:
                 continue
 
+            print(tcp_datagram.flags)
+
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
