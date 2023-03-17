@@ -12,7 +12,7 @@ def compare_bytes(a, b):
 
 
 def main():
-    with open('10MB.log', 'rb') as f:
+    with open('10MB(1).log', 'rb') as f:
         file_1_contents = f.read()
 
     with open('10OK.log', 'rb') as f:
