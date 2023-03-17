@@ -305,7 +305,7 @@ class RawSocket:
 
 
 
-    def receive_all(self, buffer_limit = 64*1024):
+    def receive_all(self, buffer_limit = 20480):
         received_data = []
         buffer = {}
         buffer_size = 0
