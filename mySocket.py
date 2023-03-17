@@ -30,7 +30,7 @@ class RawSocket:
             self._destPort = dest_port
             
             # Generates a random TCP sequence number within the valid range (i.e., 0 to 2^32-1).
-            self._seq = randint(0, (2 << 31) - 1)
+            self._seq = randint(0, (2**32) - 1)
             
             # Sets the initial TCP acknowledgement sequence number to 0.
             self._ack_seq = 0
@@ -322,9 +322,12 @@ class RawSocket:
                 continue
 
             if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
+
                 if tcp_datagram.seq == self._ack_seq:
                     # Process the received packet
                     self._ack_seq += len(tcp_datagram.payload)
+                    self.rwnd = max(1, buffer_limit - buffer_size)
+                    self.adwind = self.rwnd
                     self._send_one(ACK, "")
                     received_data.append(tcp_datagram.payload)
 
@@ -336,9 +339,11 @@ class RawSocket:
                         payload = buffer[self._ack_seq]
                         received_data.append(payload)
                         payload_len = len(payload)
-                        del(bufferbuffer[self._ack_seq])
+                        del(buffer[self._ack_seq])
                         buffer_size -= payload_len
                         self._ack_seq += payload_len
+                        self.rwnd = max(1, buffer_limit - buffer_size)
+                        self.adwind = self.rwnd
                         self._send_one(ACK, "")
                 
                 # Duplicate packet received
@@ -366,10 +371,6 @@ class RawSocket:
                 print('finish')
                 self._send_one(ACK, "")
                 break
-
-            self.rwnd = max(0, buffer_limit - buffer_size)
-
-            self.adwind = self.rwnd
             
             total_payload = b''.join(received_data)
 
@@ -379,13 +380,6 @@ class RawSocket:
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
         return body
-
-
-
-
-
-
-
 
     def unpack_ip_header(self, packet):
         IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
