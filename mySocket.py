@@ -486,9 +486,6 @@ class RawSocket:
         return False
 
     def verify_tcp_checksum(self, src_ip, dest_ip, tcp_header, tcp_payload, tcp_checksum):
-        def accumulate(accumulator, chunk):
-            return accumulator + (chunk >> 8) + (chunk & 0xff)
-
         def carry_around_add(a, b):
             c = a + b
             return (c & 0xffff) + (c >> 16)
@@ -498,7 +495,7 @@ class RawSocket:
         dest_ip = int.from_bytes(socket.inet_aton(dest_ip), byteorder='big')
 
         # Create pseudo header
-        pseudo_header = pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
+        pseudo_header = struct.pack('!4s4sBBH', src_ip.to_bytes(4, byteorder='big'), dest_ip.to_bytes(4, byteorder='big'), 0, socket.IPPROTO_TCP, len(tcp_header) + len(tcp_payload))
 
         # Pad TCP payload if necessary
         if len(tcp_payload) % 2 == 1:
@@ -507,15 +504,15 @@ class RawSocket:
         # Concatenate pseudo header, TCP header, and TCP payload
         data = pseudo_header + tcp_header + tcp_payload
 
-        # Group the data into 16-bit chunks
-        data_chunks = [int.from_bytes(data[i:i + 2], byteorder='big') for i in range(0, len(data), 2)]
-
         # Calculate the checksum
         total = 0
-        total = reduce(carry_around_add, map(lambda chunk: accumulate(total, chunk), data_chunks))
+        for i in range(0, len(data), 2):
+            total = carry_around_add(total, int.from_bytes(data[i:i+2], byteorder='big'))
         is_valid = ~total & 0xffff == tcp_checksum
         if not is_valid:
             print(f"right: {tcp_checksum}, cal: {~total & 0xffff}")
+        else:
+            print("Valid TCP cks")
         return ~total & 0xffff == tcp_checksum
 
 
