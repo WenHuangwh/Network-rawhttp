@@ -511,7 +511,7 @@ class RawSocket:
         data_chunks = [int.from_bytes(data[i:i + 2], byteorder='big') for i in range(0, len(data), 2)]
 
         # Calculate the checksum
-        total = reduce(carry_around_add, map(accumulate, data_chunks))
+        total = reduce(carry_around_add, map(lambda chunk: accumulate(total, chunk), data_chunks))
         return ~total & 0xffff == tcp_checksum
 
 
