@@ -6,6 +6,8 @@ def compare_bytes(a, b):
     for i in range(min_length):
         if a[i] != b[i]:
             print(f"diff at index {i}, MB = {a[i]}, OK = {b[i]}")
+        if i == min_length - 1:
+            print("end")
     
     return 
 
