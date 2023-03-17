@@ -485,7 +485,7 @@ class RawSocket:
         print("Error closing connection")
         return False
 
-    def verify_tcp_checksum(src_ip, dest_ip, tcp_header, tcp_payload, tcp_checksum):
+    def verify_tcp_checksum(self, src_ip, dest_ip, tcp_header, tcp_payload, tcp_checksum):
         def accumulate(accumulator, chunk):
             return accumulator + (chunk >> 8) + (chunk & 0xff)
 
