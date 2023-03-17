@@ -39,8 +39,8 @@ class RawSocket:
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self.cwnd = 1
-            self.ssthresh = 20480
-            self.rwnd = 20480
+            self.ssthresh = 65535
+            self.rwnd = 65535
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (self.rwnd)
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
@@ -307,7 +307,7 @@ class RawSocket:
 
 
 
-    def receive_all(self, buffer_limit = 20480):
+    def receive_all(self, buffer_limit = 65535):
         received_data = []
         buffer = {}
         buffer_size = 0
