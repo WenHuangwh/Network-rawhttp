@@ -312,7 +312,6 @@ class RawSocket:
 
 
     def receive_all2(self, buffer_limit = 65535):
-        received_data = []
         buffer = {}
         buffer_size = 0
 
@@ -460,7 +459,7 @@ class RawSocket:
 
     def verify_tcp_checksum(self, bytes_packet):
         ip_header_bytes = bytes_packet[:20]
-        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
         ip_header_length = (ip_header[0] & 0x0F) * 4
         protocol = ip_header[6]
 
@@ -475,7 +474,7 @@ class RawSocket:
         src_ip, dst_ip = ip_header[8], ip_header[9]
         tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
-        pseudo_header = src_ip + dst_ip + struct.pack('!BBH', 0, protocol, tcp_length)
+        pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
 
         def add_16_bit_words(a, b):
             result = a + b
