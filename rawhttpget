@@ -80,7 +80,7 @@ def main():
     print("Payload saved to received_payload.log")
     print(f"Time: {time.time() - start}")
 
-    # rawSocket.close()
+    rawSocket.close()
 
 if __name__ == "__main__":
     main()
