@@ -241,10 +241,8 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        # if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
-        #     print("Packet: ")
-        #     print(packet.hex())
-        #     return False
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
+            return False
         return True
 
     def _receive_one(self, size=20480, timeout=60):
@@ -460,109 +458,83 @@ class RawSocket:
         print("Error closing connection")
         return False
 
-    def verify_tcp_checksum(self, byte_packet):
-        # Extract the IP header from the packet bytes
-        ip_header_length = (byte_packet[0] & 0x0F) * 4
-        ip_header = byte_packet[:ip_header_length]
+    def verify_tcp_checksum(self, bytes_packet):
+        ip_header_bytes = bytes_packet[:20]
+        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        ip_header_length = (ip_header[0] & 0x0F) * 4
+        protocol = ip_header[6]
 
-        # Verify the total length of the packet
-        total_length = unpack('!H', ip_header[2:4])[0]
-        print("total_length",total_length)
-        print("len packet", len(byte_packet))
-        # if total_length != len(packet):
-        #     return False
+        if protocol != 6:  # TCP protocol number is 6
+            print("Not a TCP packet.")
+            return False
 
-        # Extract the TCP header from the packet bytes
-        tcp_header_offset = ip_header_length
-        tcp_header_length = (byte_packet[tcp_header_offset + 12] >> 4) * 4
-        tcp_header = byte_packet[tcp_header_offset:tcp_header_offset+tcp_header_length]
+        tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
+        tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
+        tcp_data = bytes_packet[ip_header_length + tcp_header_length:]
 
-        # Extract the original TCP checksum value from the TCP header
-        original_checksum = unpack('!H', tcp_header[16:18])[0]
-        print("original checksum", original_checksum)
+        src_ip, dst_ip = ip_header[8], ip_header[9]
+        tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
-        if original_checksum == 0:
-            return True
+        pseudo_header = src_ip + dst_ip + struct.pack('!BBH', 0, protocol, tcp_length)
 
-        # Set the checksum field in the TCP header to zero
-        tcp_header = bytearray(tcp_header)
-        pack_into('!H', tcp_header, 16, 0)
+        def add_16_bit_words(a, b):
+            result = a + b
+            return (result & 0xffff) + (result >> 16)
 
-        # Calculate the checksum over the TCP pseudo-header, TCP header, and TCP data
-        pseudo_header = ip_header[12:20] + b'\x00\x06' + pack('!H', total_length - ip_header_length)
-        tcp_data_offset = tcp_header_offset + tcp_header_length
-        tcp_data = byte_packet[tcp_data_offset:]
+        def calculate_checksum(data):
+            checksum = 0
+            for i in range(0, len(data), 2):
+                if i + 1 < len(data):
+                    word = (data[i] << 8) + data[i + 1]
+                else:
+                    word = (data[i] << 8)
+                checksum = add_16_bit_words(checksum, word)
+            return ~checksum & 0xffff
 
-        # Pad data with a zero byte if its length is not a multiple of 2
         if len(tcp_data) % 2 != 0:
             tcp_data += b'\x00'
 
-        checksum = 0
-        for chunk in [pseudo_header, tcp_header, tcp_data]:
-            for i in range(0, len(chunk), 2):
-                word = (chunk[i] << 8) + chunk[i+1]
-                checksum += word
+        checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
+        calculated_checksum = calculate_checksum(checksum_data)
 
-        while checksum > 0xffff:
-            checksum = (checksum & 0xffff) + (checksum >> 16)
-
-        calculated_checksum = ~checksum & 0xffff
-        print("calculated checksum", calculated_checksum)
-        
-        # Verify the checksum
+        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)
 
-        # Return the original TCP checksum value and whether the calculated checksum is valid
+        print(f"Original TCP checksum: {original_checksum}")
+        print(f"Calculated TCP checksum: {calculated_checksum}")
         return is_valid
 
+
+   
     def verify_ipv4_checksum(self, byte_packet):
-        """
-        Verifies the checksum of an IPv4 header.
-
-        Args:
-            header (bytes): The IPv4 header as bytes.
-            The input header needs to be at least 20 bytes long for a valid IPv4 header. 
-
-        Returns:
-            bool: True if the checksum is valid, False otherwise.
-        """
         header = byte_packet[:20]
 
         if len(header) < 20:
             print("Invalid IPv4 header length")
             return False
 
-        # Calculate the new checksum
-        if len(header) % 2 == 1:
-            # Append a padding byte to ensure that the header length is even
-            header += b'\x00'
-
         version = header[0] >> 4
-        print("ip version", version)
         if version != 4:
             print("Invalid IP version")
             return False
 
         ihl = header[0] & 0x0F
-        print("IPv4 header length field", ihl)
         if ihl < 5:
             print("Invalid IPv4 header length field")
             return False
-        
-        # Extract the original checksum from the header
+
         original_checksum = int.from_bytes(header[10:12], byteorder='big')
-        print("IP header original checksum", original_checksum)
-        
-        # Set the checksum field in the header to zero
+        print("Original IP checksum:", original_checksum)
+
         header = header[:10] + b'\x00\x00' + header[12:]
 
-        # Calculate the new checksum
         values = unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
-        checksum = ~checksum & 0xFFFF
+        calculated_checksum = ~checksum & 0xFFFF
 
-        print("IP header calculated checksum", checksum)
-        # Verify the checksum
-        return original_checksum == checksum
+        print("Calculated IP checksum:", calculated_checksum)
+
+        return original_checksum == calculated_checksum
+        
