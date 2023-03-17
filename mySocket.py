@@ -6,6 +6,7 @@ from random import randint
 import time
 from collections import namedtuple, deque
 from priorityQueue import PriorityQueue
+from functools import reduce
 
 
 SYN = 0x02   # 0b00000010
@@ -232,7 +233,7 @@ class RawSocket:
     # Recv
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
-        ip_datagram = self.unpack_ip_header(packet)
+        ip_datagram, tcp_header, tcp_payload = self.unpack_ip_header(packet)
         tcp_datagram = self.unpack_tcp_header(packet)
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
             # print("Invalid ip address")
@@ -241,7 +242,7 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(self.dest_ipAddr, self.src_ipAddr, tcp_header, tcp_payload, tcp_datagram.checksum):
             return False
         return True
 
@@ -393,7 +394,18 @@ class RawSocket:
 
         return body
 
-    def unpack_ip_header(self, packet):
+    # def unpack_ip_header(self, packet):
+    #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
+    #     ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
+    #     version = ip_header[0] >> 4
+    #     header_length = (ip_header[0] & 0xF) * 4
+    #     ttl = ip_header[5]
+    #     protocol = ip_header[6]
+    #     src_address = socket.inet_ntoa(ip_header[8])
+    #     dest_address = socket.inet_ntoa(ip_header[9])
+    #     return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
+
+    def unpack_ip_packet(self, packet):
         IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
         ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
         version = ip_header[0] >> 4
@@ -402,7 +414,23 @@ class RawSocket:
         protocol = ip_header[6]
         src_address = socket.inet_ntoa(ip_header[8])
         dest_address = socket.inet_ntoa(ip_header[9])
-        return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
+
+        ip_header_info = IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
+
+        # Check if the packet is TCP
+        if protocol != socket.IPPROTO_TCP:
+            raise ValueError("The packet is not a TCP packet")
+
+        # Parse TCP header
+        tcp_header_len = ((packet[header_length + 12] >> 4) & 0x0F) * 4
+        tcp_header = packet[header_length:header_length + tcp_header_len]
+
+        # Extract the TCP payload
+        total_length = int.from_bytes(packet[2:4], byteorder='big')
+        tcp_payload = packet[header_length + tcp_header_len:total_length]
+
+        return ip_header_info, tcp_header, tcp_payload
+
 
     def unpack_tcp_header(self, packet):
         TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
@@ -457,55 +485,34 @@ class RawSocket:
         print("Error closing connection")
         return False
 
-    def verify_tcp_checksum(self, bytes_packet):
-        ip_header_bytes = bytes_packet[:20]
-        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
-        ip_header_length = (ip_header[0] & 0x0F) * 4
-        protocol = ip_header[6]
+    def verify_tcp_checksum(self, source_ip, dest_ip, tcp_header, payload, tcp_checksum):
+        pseudo_header = pack('!4s4sBBH',
+                            socket.inet_aton(source_ip),
+                            socket.inet_aton(dest_ip),
+                            0,
+                            socket.IPPROTO_TCP,
+                            len(tcp_header) + len(payload))
 
-        if protocol != 6:  # TCP protocol number is 6
-            print("Not a TCP packet.")
-            return False
+        padding = b'\x00' if len(payload) % 2 == 1 else b''
+        padded_payload = payload + padding
 
-        tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
-        tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
-        tcp_data = bytes_packet[ip_header_length + tcp_header_length:]
+        total_data = pseudo_header + tcp_header + padded_payload
 
-        src_ip, dst_ip = ip_header[8], ip_header[9]
-        tcp_length = len(tcp_header_bytes) + len(tcp_data)
+        def accumulate(acc, chunk):
+            return acc + (chunk[0] << 8) + chunk[1]
 
-        pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
+        def carry_around_add(a, b):
+            c = a + b
+            return (c & 0xffff) + (c >> 16)
 
-        def add_16_bit_words(a, b):
-            result = a + b
-            return (result & 0xffff) + (result >> 16)
+        def from_data_to_chunks(data):
+            return [data[i:i + 2] for i in range(0, len(data), 2)]
 
-        def calculate_checksum(data):
-            checksum = 0
-            for i in range(0, len(data), 2):
-                if i + 1 < len(data):
-                    word = (data[i] << 8) + data[i + 1]
-                else:
-                    word = (data[i] << 8)
-                checksum = add_16_bit_words(checksum, word)
-            return ~checksum & 0xffff
+        data_chunks = from_data_to_chunks(total_data)
 
-        if len(tcp_data) % 2 != 0:
-            tcp_data += b'\x00'
+        total = reduce(carry_around_add, map(accumulate, data_chunks))
 
-        checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = calculate_checksum(checksum_data)
-
-        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
-        is_valid = (calculated_checksum == original_checksum)
-
-        if not is_valid:
-            print(bytes_packet.hex())
-            print(f"Original TCP checksum: {original_checksum}")
-            print(f"Calculated TCP checksum: {calculated_checksum}")
-        else:
-            print("Valid TCP")
-        return is_valid
+        return ~total & 0xffff == tcp_checksum
 
 
    
