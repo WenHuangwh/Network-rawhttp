@@ -379,7 +379,7 @@ class RawSocket:
             
             total_payload = b''.join(received_data)
 
-            print(f'current lenght of recv {len(total_payload)}')
+            print(f'current lenght of recv {len(total_payload) / 1024}')
 
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
