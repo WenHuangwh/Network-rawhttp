@@ -320,7 +320,7 @@ class RawSocket:
 
         start_seq = self._ack_seq
         
-        data_is_complete_seq = self._ack_seq + 1
+        data_is_complete_seq = -1
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
@@ -337,14 +337,14 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            if tcp_datagram.flags & FIN == FIN:
+            if tcp_datagram.flags & FIN != 0:
                 print("FIN received")
                 buffer[tcp_datagram.seq] = tcp_datagram.payload
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
                 data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
                 print(f"seq: {tcp_datagram.seq}")
-                print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self.ack_seq}")
+                print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")
 
             # Duplicate packet received
             elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
