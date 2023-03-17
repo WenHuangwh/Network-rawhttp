@@ -42,7 +42,7 @@ class RawSocket:
             self.ssthresh = 64*1024
             self.rwnd = 64 * 1024
             # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (self.rwnd)
+            self.tcp_adwind = socket.htons (20480)
             # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
             # is in the slow start phase.
             self.slow_start_flag = True
