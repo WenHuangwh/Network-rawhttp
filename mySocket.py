@@ -323,15 +323,9 @@ class RawSocket:
 
             if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
 
-                if tcp_datagram.seq == self._ack_seq:
-                    # Process the received packet
-                    self._ack_seq += len(tcp_datagram.payload)
-                    self._ack_seq %= 0x100000000
-                    self.rwnd = max(1, buffer_limit - buffer_size)
-                    # self.tcp_adwind = socket.htons(self.rwnd)
-                    self._send_one(ACK, "")
-                    received_data.append(tcp_datagram.payload)
-
+                if tcp_datagram.seq > self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit and self._ack_seq not in buffer: 
+                    buffer[tcp_datagram.seq] = tcp_datagram.payload 
+                    buffer_size += len(tcp_datagram.payload)
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
 
@@ -357,12 +351,6 @@ class RawSocket:
 
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
-
-                # Out-of-order packet received within Receiver window size
-                elif tcp_datagram.seq > self._ack_seq and tcp_datagram.seq <= self._ack_seq + buffer_limit:  
-                    print('out of order')
-                    buffer[tcp_datagram.seq] = tcp_datagram.payload
-                    buffer_size += len(tcp_datagram.payload)
 
                 elif tcp_datagram.flags & FIN:
                     print('finish')
