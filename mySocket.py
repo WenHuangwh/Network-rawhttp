@@ -317,12 +317,14 @@ class RawSocket:
         received_data = []
         buffer = {}
         buffer_size = 0
+        
+        data_is_complete_seq = self._ack_seq + 1
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
         receive_fin = False
 
-        while not receive_fin:
+        while not receive_fin or data_is_complete_seq != self._ack_seq:
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
@@ -335,6 +337,7 @@ class RawSocket:
                 buffer[tcp_datagram.seq] = tcp_datagram.payload
                 buffer_size += len(tcp_datagram.payload)
                 receive_fin = True
+                data_is_complete_seq = tcp_datagram.seq + len(tcp_datagram.payload)
 
             if not tcp_datagram.flags & PSH_ACK:
                 continue
