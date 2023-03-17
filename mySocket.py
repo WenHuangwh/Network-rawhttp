@@ -343,7 +343,6 @@ class RawSocket:
                         self._ack_seq += payload_len
                         self._ack_seq %= 0x100000000
                         self.rwnd = max(1, buffer_limit - buffer_size)
-                        # self.tcp_adwind = socket.htons(self.rwnd)
                         self._send_one(ACK, "")
                 
                 # Duplicate packet received
@@ -356,13 +355,15 @@ class RawSocket:
                         # Reset the duplicate ACK counter
                         dup_ack_counter = 0
 
-                elif tcp_datagram.flags & FIN:
-                    print('finish')
-                    self._send_one(ACK, "")
-                    break
-
             elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
-                print('finish')
+                    # Process the payload if present
+                if len(tcp_datagram.payload) > 0 and tcp_datagram.seq == self._ack_seq::
+                    received_data.append(tcp_datagram.payload)
+                    self._ack_seq += len(tcp_datagram.payload)
+                    self._ack_seq %= 0x100000000
+                # Increment the ack_seq by 1 to acknowledge the FIN flag
+                self._ack_seq += 1
+                self._ack_seq %= 0x100000000
                 self._send_one(ACK, "")
                 break
             
