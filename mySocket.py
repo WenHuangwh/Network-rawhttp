@@ -163,7 +163,7 @@ class RawSocket:
             ack_seq_set = set()
             slow_flag = False
             cur_ack_seq = -1
-            for i in range(packet_number_to_send):
+            for i in range(window_size):
                 tcp_datagram = self._receive_one(timeout=5)
 
                 # if not tcp_datagram:
