@@ -274,6 +274,8 @@ class RawSocket:
                 continue
 
             if tcp_datagram.flags & FIN != 0:
+                print(f"FIN pkt: seq: {tcp_datagram.seq}")
+                print(f"FIN pkt: paload len: { len(tcp_datagram.payload)}")
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
