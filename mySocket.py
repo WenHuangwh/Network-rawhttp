@@ -188,6 +188,7 @@ class RawSocket:
             
             # If current self._seq is not seq_to_send
             # There must be a packet drop 
+            self._seq = seq_to_send
             if self._seq != seq_to_send:
                 print("slow")
                 self.update_congestion_control(slow_flag=True)
