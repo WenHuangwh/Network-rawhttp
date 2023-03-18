@@ -35,18 +35,15 @@ class RawSocket:
             
             # Sets the initial TCP acknowledgement sequence number to 0.
             self._ack_seq = 0
-
             self.ip_id = 1    
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
+            self.maxcwnd = 1000
             self.cwnd = 1
-            self.ssthresh = 65535
+            self.ssthresh = self.maxcwnd / 2
             self.rwnd = 65535
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (self.rwnd)
-            # Sets the initial slow start flag to True, indicating that the congestion avoidance algorithm
-            # is in the slow start phase.
-            self.slow_start_flag = True
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
             self.mss = 1460
         except socket.error as e:
@@ -135,74 +132,64 @@ class RawSocket:
 
 
     def send(self, data):
+        adwnd = 65535
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
+        buffer = {}
+        buffer_key = self._seq
 
-        # Implement a deque to handle segments in flight
-        segments_in_flight = deque()
+        for data in segments:
+            if len(data) % 2 == 1:
+                data += " "
+            buffer[buffer_key] = data
+            buffer_key += len(data)
+            
+        while self._seq in buffer:
+            packet_number_to_send = min(self.cwnd, adwnd // self.mss)
+            
+            seq_to_send = self._seq
+            for i in range(packet_number_to_send):
+                if seq_to_send not in buffer:
+                    packet_number_to_send = i
+                    break
+                data = buffer[seq_to_send]
+                self._send_one(flags=PSH_ACK, data=data)
+                seq_to_send += len(data)
 
-        # Initialize the duplicate ACK counter
-        dup_ack_counter = 0
+            largest_ack_seq = -1
+            expected_largest_ack_seq = seq_to_send
 
-        while segments or segments_in_flight:
-            # Send segments within the cwnd limit
-            while segments and len(segments_in_flight) < self.cwnd:
-                segment = segments.pop(0)
-                if len(segment) % 2 == 1:
-                    segment += " "
-                self._send_one(PSH_ACK, segment)
-                self._seq += len(segment)
-                segments_in_flight.append((self._seq, segment))
+            for i in range(packet_number_to_send):
+                tcp_datagram = self._receive_one(timeout=5)
 
-            # Wait for the ACK from the server
-            tcp_datagram = self._receive_one()
+                if not tcp_datagram:
+                    break
 
-            if tcp_datagram is None:  # Timeout occurred
-                # Timeout handling
-                self.ssthresh = max(len(segments_in_flight) // 2, 2)
-                self.cwnd = 1
-                self.slow_start_flag = True
-                dup_ack_counter = 0
+                if tcp_datagram.flags & ACK == ACK:
+                    adwnd = min(65535, tcp_datagram.adwind)
+                    largest_ack_seq = max(largest_ack_seq, tcp_datagram.ack_seq)
+                    self._seq = largest_ack_seq
+                    if largest_ack_seq == expected_largest_ack_seq:
+                        break
+                
+                if tcp_datagram.flags & FIN == FIN:
+                    # respond and close
+            
+            if self._seq != expected_largest_ack_seq:
+                self.update_congestion_control(slow_flag = True)
 
-                # Resend the first unacknowledged segment
-                unacked_seq, unacked_segment = segments_in_flight[0]
-                self._send_one(PSH_ACK, unacked_segment)
+        self._send_one(flags=FIN_PSH_ACK, data="")
 
-            elif tcp_datagram.flags == ACK:
-                # Check if the received packet is an ACK for a segment in flight
-                if any(s[0] == tcp_datagram.ack_seq for s in segments_in_flight):
-                    # Update the acknowledgement sequence number
-                    self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
 
-                    # Remove acknowledged segments from segments_in_flight
-                    segments_in_flight = deque(s for s in segments_in_flight if s[0] > tcp_datagram.ack_seq)
 
-                    # Reset duplicate ACK counter
-                    dup_ack_counter = 0
+    def update_congestion_control(self, slow_flag):
+        if not slow_flag:
+            if self.cwnd * 2 <= self.maxcwnd:
+                self.cwnd *= 2
+            elif self.cwnd < self.maxcwnd:
+                self.cwnd += 1
+        else:
+            self.cwnd = 1
 
-                    # Adjust the cwnd based on slow start or congestion avoidance
-                    if self.slow_start_flag:
-                        self.cwnd *= 2
-                        if self.cwnd >= self.ssthresh:
-                            self.slow_start_flag = False
-                    else:
-                        self.cwnd += 1
-
-                else:  # Duplicate ACK received
-                    dup_ack_counter += 1
-                    if dup_ack_counter >= 3:  # Fast retransmit
-                        # Update the ssthresh and cwnd
-                        self.ssthresh = max(len(segments_in_flight) // 2, 2)
-                        self.cwnd = self.ssthresh + 3
-
-                        # Resend the first unacknowledged segment
-                        unacked_seq, unacked_segment = segments_in_flight[0]
-                        self._send_one(PSH_ACK, unacked_segment)
-
-                        # Reset the duplicate ACK counter
-                        dup_ack_counter = 0
-
-            else:
-                print("Unexpected packet received. Waiting for ACK...")
 
     # Recv
     def check_incomingPKT(self, packet):
@@ -270,12 +257,12 @@ class RawSocket:
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
-                timeout_counter += 1
-                self._send_one(ACK, "") 
-                if timeout_counter >= max_timeouts:
-                    print("Time out, close connection")
-                    self.close()
-                    return buffer
+                # timeout_counter += 1
+                # self._send_one(ACK, "") 
+                # if timeout_counter >= max_timeouts:
+                #     print("Time out, close connection")
+                #     self.close()
+                #     return buffer
                 continue
             else:
                 timeout_counter = 0
