@@ -384,7 +384,7 @@ class RawSocket:
 
     def verify_tcp_checksum(self, bytes_packet):
         ip_header_bytes = bytes_packet[:20]
-        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
         protocol = ip_header[6]
 
         if protocol != 6:
@@ -399,7 +399,7 @@ class RawSocket:
         src_ip, dst_ip = ip_header[8], ip_header[9]
         tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
-        pseudo_header = src_ip + dst_ip + struct.pack('!BBH', 0, protocol, tcp_length)
+        pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
 
         def calculate_checksum(data):
             checksum = 0
