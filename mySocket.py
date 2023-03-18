@@ -210,7 +210,7 @@ class RawSocket:
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
             # print("Invalid port")
             return False
-        All checks passed, return True
+        # All checks passed, return True
         if not self.verify_ipv4_checksum(packet):
             return False
         if not self.verify_tcp_checksum(packet):
