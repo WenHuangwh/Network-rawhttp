@@ -174,6 +174,7 @@ class RawSocket:
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
                     self._seq = max(self._seq, tcp_datagram.ack_seq)
+                    self.update_congestion_control(slow_flag=False)
                 
                 # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
