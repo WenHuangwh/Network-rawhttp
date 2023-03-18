@@ -300,13 +300,12 @@ class RawSocket:
             if tcp_datagram is None:
                 continue
 
-            print(tcp_datagram.flags)
-
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
+            payload_len = len(tcp_datagram.payload)
+
             if tcp_datagram.flags & FIN != 0:
-                payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                 buffer_size += payload_len
@@ -322,24 +321,32 @@ class RawSocket:
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
 
+            # 
+            elif self._ack_seq = tcp_datagram.seq:
+                buffer_size -= payload_len
+                self._ack_seq += payload_len
+                self._ack_seq %= 0x100000000
+                self.rwnd = max(1, buffer_limit - buffer_size)
+                self._send_one(ACK, "")
+                buffer[tcp_datagram.seq] = tcp_datagram.payload
+                # Update ack_seq and send message to server
+                while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
+                    payload = buffer[self._ack_seq]
+                    payload_len = len(payload)
+                    buffer_size -= payload_len
+                    self._ack_seq += payload_len
+                    self._ack_seq %= 0x100000000
+                    self.rwnd = max(1, buffer_limit - buffer_size)
+                    self._send_one(ACK, "") 
+
             # Store valid packets in buffer
-            elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit:
-                payload_len = len(tcp_datagram.payload)
+            elif self._ack_seq < tcp_datagram.seq <= self._ack_seq + buffer_limit:
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                 buffer_size += payload_len
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
-                
-            # Update ack_seq and send messge to server
-            while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
-                payload_len = len(payload)
-                buffer_size -= payload_len
-                self._ack_seq += payload_len
-                self._ack_seq %= 0x100000000
-                self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
-                payload = buffer[self._ack_seq]
 
         # Send ACK respond to FIN
         self._ack_seq += 1
