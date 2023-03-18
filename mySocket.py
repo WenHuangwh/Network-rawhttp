@@ -224,7 +224,7 @@ class RawSocket:
         #     return False
         return True
 
-    def _receive_one(self, timeout=5, size=65535):
+    def _receive_one(self, timeout=60, size=65535):
         try:
             self.recv_socket.settimeout(timeout)
             received_pkt = self.recv_socket.recv(size)
