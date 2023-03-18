@@ -420,15 +420,16 @@ class RawSocket:
 
         return (~res) & 0xffff
 
-    def verify_tcp_checksum(self, raw_packet):
+    def verify_tcp_checksum(self, packet):
+        tcp_packet = packet[20:]
         source_address = socket.inet_aton(self._destIpAddr)
         dest_address = socket.inet_aton(self._srcIpAddr)
         pseudo_header = pack('!4s4sBBH',
                              source_address, dest_address,
                              0, socket.IPPROTO_TCP,
-                             len(raw_bytes))
+                             len(tcp_packet))
 
-        return calculate_checksum(pseudo_header + raw_bytes) == 0
+        return calculate_checksum(pseudo_header + tcp_packet) == 0
 
         return is_valid
 
