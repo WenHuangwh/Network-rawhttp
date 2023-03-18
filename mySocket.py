@@ -420,7 +420,7 @@ class RawSocket:
 
         return (~res) & 0xffff
 
-    def validate_tcp_checksum(self, raw_packet):
+    def verify_tcp_checksum(self, raw_packet):
         ip_header_bytes = raw_packet[:20]
         ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
         protocol = ip_header[6]
