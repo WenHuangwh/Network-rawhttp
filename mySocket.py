@@ -244,6 +244,8 @@ class RawSocket:
 
         buffer = self._receive_all()
 
+        print("buffer received")
+
         received_data = []
 
         while start_seq in buffer:
@@ -279,6 +281,7 @@ class RawSocket:
                 self._send_one(ACK, "") 
                 if timeout_counter >= max_timeouts:
                     self.close()
+                    print("Time out, send buffer")
                     return buffer
                 continue
             else:
