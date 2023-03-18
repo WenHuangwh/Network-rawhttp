@@ -256,7 +256,7 @@ class RawSocket:
         # Initialize the duplicate ACK counter and timeout counter
         dup_ack_counter = 0
         timeout_counter = 0
-        max_timeouts = 3
+        max_timeouts = 1000
         max_dup = 3
 
         receive_FIN = False
@@ -487,7 +487,7 @@ class RawSocket:
             print("Incorrect TCP checksum")
             print(f"Original TCP checksum: {original_checksum}")
             print(f"Calculated TCP checksum: {calculated_checksum}")
-            print(bytes_packet)
+            # print(bytes_packet)
         return is_valid
 
     
