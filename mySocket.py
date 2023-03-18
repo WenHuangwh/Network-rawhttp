@@ -273,7 +273,7 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            if tcp_datagram.flags & FIN != 0:
+            if tcp_datagram.flags & FIN == FIN:
                 print(f"FIN pkt: seq: {tcp_datagram.seq}")
                 print(f"FIN pkt: paload len: { len(tcp_datagram.payload)}")
                 payload_len = len(tcp_datagram.payload)
