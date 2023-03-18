@@ -384,31 +384,21 @@ class RawSocket:
         print("Receive time expired")
         return False
 
-    def close(self, timeout=5):
+    def close(self):
         # Send FIN packet to the server
         self._send_one(FIN, "")
 
         # We wait for FIN_ACK packet,
         # otherwise, if time is out, we send FIN
         # Start the timer
-        start_time = time.time()
-        receive_FIN_ACK = False
+        start_time = time.time() 
+        tcp_datagram = self._receive_one()
 
-        while time.time() - start_time <= timeout:
-            
-            tcp_datagram = self._receive_one()
-            if tcp_datagram is None:
-                continue
-
-            if tcp_datagram.flags & FIN_ACK:
-                # Server acknowledged the FIN_ACK, break the loop
-                receive_FIN_ACK = True
-                break
-
-        # Send ACK to the server's FIN_ACK, completing the four-way handshake
-        if receive_FIN_ACK:
+        if tcp_datagram != None and tcp_datagram.flags & FIN_ACK:
+            # Server acknowledged the FIN_ACK, break the loop
+            print("FIN_ACK received")
             self._send_one(ACK, "")
-
+            
         self.send_socket.close()
         self.recv_socket.close()
 
