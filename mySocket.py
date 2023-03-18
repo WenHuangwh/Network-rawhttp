@@ -166,14 +166,17 @@ class RawSocket:
                 tcp_datagram = self._receive_one(timeout=5)
 
                 if not tcp_datagram:
+                    print("empty")
                     break
 
                 # If ACK is received, update adwnd and largest_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
                     if tcp_datagram.ack_seq <= self._seq:
+                        print("dup")
                         self.update_congestion_control(slow_flag=True)
                     else:
+                        print("good")
                         self._seq = tcp_datagram.ack_seq
                 
                 # If FIN is received, acknowledge and close the connection
@@ -189,6 +192,7 @@ class RawSocket:
             # If current self._seq is not seq_to_send
             # There must be a packet drop 
             if self._seq != seq_to_send:
+                print("slow")
                 self.update_congestion_control(slow_flag=True)
             else:
                 self.update_congestion_control(slow_flag=False)
