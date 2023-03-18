@@ -171,7 +171,7 @@ class RawSocket:
                     if largest_ack_seq == expected_largest_ack_seq:
                         break
                 
-                if tcp_datagram.flags & FIN == FIN:
+                # if tcp_datagram.flags & FIN == FIN:
                     # respond and close
             
             if self._seq != expected_largest_ack_seq:
