@@ -423,7 +423,7 @@ class RawSocket:
     def verify_tcp_checksum(self, raw_packet):
         source_address = socket.inet_aton(self._destIpAddr)
         dest_address = socket.inet_aton(self._srcIpAddr)
-        pseudo_header = pack(PSEUDO_HEADER_FORMAT,
+        pseudo_header = pack('!4s4sBBH',
                              source_address, dest_address,
                              0, socket.IPPROTO_TCP,
                              len(raw_bytes))
