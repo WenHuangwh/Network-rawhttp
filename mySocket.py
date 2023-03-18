@@ -158,6 +158,7 @@ class RawSocket:
                 data = buffer[self._seq]
                 self._send_one(flags=PSH_ACK, data=data)
                 self._seq += len(data)
+                print("for loop")
 
             # Receive ACKs for the sent packets
             ack_seq_set = set()
@@ -165,6 +166,7 @@ class RawSocket:
             cur_ack_seq = -1
             for i in range(window_size):
                 tcp_datagram = self._receive_one(timeout=5)
+                print("for loop 2")
 
                 # if not tcp_datagram:
                 #     slow_flag = True
