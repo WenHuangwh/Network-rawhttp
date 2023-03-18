@@ -366,7 +366,7 @@ class RawSocket:
         # self.seq += 1
         self._seq += 1
         # Expected server,seq = random server.ack = self.seq
-        tcp_datagram = self._receive_one()
+        tcp_datagram = self._receive_one(60)
         if tcp_datagram != None and tcp_datagram.ack_seq == self._seq and tcp_datagram.flags == SYN_ACK:
             # send sefl.seq, self.ack = server.seq + 1
             self._ack_seq = tcp_datagram.seq + 1
