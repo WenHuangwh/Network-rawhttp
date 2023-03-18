@@ -266,7 +266,7 @@ class RawSocket:
         while time.time() - start_time <= timeout:
             buffer = self._receive_all()
 
-        # self.close
+        self.close()
 
         received_data = []
 
