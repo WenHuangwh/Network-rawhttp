@@ -45,7 +45,7 @@ class RawSocket:
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (self.rwnd)
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
-            self.mss = 1
+            self.mss = 2
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
@@ -175,8 +175,6 @@ class RawSocket:
             
             if self._seq != expected_largest_ack_seq:
                 self.update_congestion_control(slow_flag = True)
-
-
 
 
     def update_congestion_control(self, slow_flag):
