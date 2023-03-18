@@ -34,9 +34,7 @@ TCP/IP Features Implemented
 
 Challenges:
     1. Efficient collaboration: One of the main challenges we faced was ensuring efficient collaboration between team members. Having two people work on the same file simultaneously is not an ideal practice. To overcome this issue, we adopted a modularization approach, breaking the project development into smaller tasks or functions. After establishing the three-way handshake, we developed and tested our functions individually and merged the functions instead of files. During team meetings, we tested each other's versions in a virtual machine, discussing potential issues and possible solutions to enhance our collective understanding of the project.
-    
     2. Ensuring smooth connection: Maintaining continuous communication between the server and client was extremely challenging. Initially, we encountered difficulties in setting the correct sequence numbers, resulting in numerous retransmissions observed in Wire Shark. Later, we faced issues in closing the connection, and it took some time to determine whether the problem lay in the sender socket not sending the FIN flag correctly or the receiver socket waiting too long to receive or recognize the FIN ACK flag. Additionally, the download speed for 2MB, 5MB, and 10MB files appeared unreasonable, as downloading a 2MB file took the longest time.
-    
     3. Testing and developing low-level programs in a virtual machine: Both team members lacked experience with low-level networking, which added to the challenges faced. Setting up the virtual machine environment required multiple steps, such as configuring IP tables, installing tools, and turning off network offloading.
 
 Collaboration
