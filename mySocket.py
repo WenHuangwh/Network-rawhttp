@@ -224,15 +224,18 @@ class RawSocket:
         #     return False
         return True
 
-    def _receive_one(self, size=65535):
-        received_pkt = self.recv_socket.recv(size)
-        if len(received_pkt) == 0:
+    def _receive_one(self, timeout=5, size=65535):
+        try:
+            self.recv_socket.settimeout(timeout)
+            received_pkt = self.recv_socket.recv(size)
+            if len(received_pkt) == 0:
+                return None
+            if self.check_incomingPKT(received_pkt):
+                ip_datagram = self.unpack_ip_packet(received_pkt)
+                tcp_datagram = self.unpack_tcp_packet(received_pkt)
+                return tcp_datagram
+        except socket.timeout:
             return None
-        if self.check_incomingPKT(received_pkt):
-            ip_datagram = self.unpack_ip_packet(received_pkt)
-            tcp_datagram = self.unpack_tcp_packet(received_pkt)
-            return tcp_datagram
-        return None
 
     def receive_all(self, timeout = 60):
         start_time = time.time()
@@ -261,15 +264,27 @@ class RawSocket:
         
         data_is_complete_seq = 0x100000000 + 1
 
-        # Initialize the duplicate ACK counter
+        # Initialize the duplicate ACK counter and timeout counter
         dup_ack_counter = 0
+        timeout_counter = 0
+        max_timeouts = 3
+
         receive_FIN = False
 
         while not receive_FIN or data_is_complete_seq != self._ack_seq:
+
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
+                timeout_counter += 1
+                self._send_one(ACK, "") 
+                if timeout_counter >= max_timeouts:
+                    self.close()
+                    break
                 continue
+            else:
+                timeout_counter = 0
+                
 
             if tcp_datagram.ack_seq != self._seq:
                 continue
@@ -302,7 +317,7 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
 
-            self._send_one(ACK, "")
+            
             # Update ack_seq and send messge to server
             while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
                 payload = buffer[self._ack_seq]
