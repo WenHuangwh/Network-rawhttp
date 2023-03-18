@@ -153,7 +153,7 @@ class RawSocket:
             # Send packets within the window size
             for i in range(window_size):
                 if self._seq not in buffer:
-                    packet_number_to_send = i
+                    window_size = i
                     break
                 data = buffer[self._seq]
                 self._send_one(flags=PSH_ACK, data=data)
