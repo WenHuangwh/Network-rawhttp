@@ -323,9 +323,9 @@ class RawSocket:
 
         # Initialize the duplicate ACK counter
         dup_ack_counter = 0
-        receive_fin = False
+        receive_FIN = False
 
-        while not receive_fin or data_is_complete_seq != self._ack_seq:
+        while not receive_FIN or data_is_complete_seq != self._ack_seq:
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
@@ -343,7 +343,7 @@ class RawSocket:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                 buffer_size += payload_len
                 # Reset the duplicate ACK counter
-                receive_fin = True
+                receive_FIN = True
                 data_is_complete_seq = tcp_datagram.seq + payload_len
                 print(f"seq: {tcp_datagram.seq}")
                 print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")
@@ -378,8 +378,9 @@ class RawSocket:
 
         # Send ACK respond to FIN
         self._ack_seq += 1
-        self._send_one(FIN_ACK, "")
-
+        self._send_one(ACK, "")
+        self._send_one(FIN, "")
+        self.close()
         received_data = []
 
         while start_seq in buffer:
@@ -470,7 +471,7 @@ class RawSocket:
         # Start the timer
         start_time = time.time()
         receive_ACK = False
-        
+
         while time.time() - start_time <= timeout:
             tcp_datagram = self._receive_one()
             if tcp_datagram is None:
@@ -478,10 +479,12 @@ class RawSocket:
 
             if tcp_datagram.flags & ACK != 0:
                 # Server acknowledged the FIN_ACK, break the loop
+                print("Receive ACK in graceful close")
                 receive_ACK = True
                 break
 
         if not receive_ACK:
+            print("Send FIN in graceful close")
             self._send_one(FIN, "")
 
         self.send_socket.close()
