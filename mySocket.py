@@ -168,29 +168,28 @@ class RawSocket:
                 tcp_datagram = self._receive_one(timeout=5)
                 print("for loop 2")
 
-                # if not tcp_datagram:
-                #     slow_flag = True
-                #     break
+                if not tcp_datagram:
+                    slow_flag = True
+                    break
 
-                # # If ACK is received, update adwnd and largest_ack_seq
-                # elif tcp_datagram.flags & ACK == ACK:
-                #     adwnd = min(65535, tcp_datagram.adwind)
-                #     if tcp_datagram.ack_seq in ack_seq_set:
-                #         slow_flag = True
-                #     else:
-                #         cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
+                # If ACK is received, update adwnd and largest_ack_seq
+                elif tcp_datagram.flags & ACK == ACK:
+                    adwnd = min(65535, tcp_datagram.adwind)
+                    if tcp_datagram.ack_seq in ack_seq_set:
+                        slow_flag = True
+                    else:
+                        cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
                 
-                # # If FIN is received, acknowledge and close the connection
-                # elif tcp_datagram.flags & FIN == FIN:
-                #     # Acknowledge the received FIN packet
-                #     self._ack_seq += 1
-                #     self._send_one(flags=ACK, data="")
-                #     # Close the connection and break out of the loop
-                #     connection_closed = True
-                #     break
+                # If FIN is received, acknowledge and close the connection
+                elif tcp_datagram.flags & FIN == FIN:
+                    # Acknowledge the received FIN packet
+                    self._ack_seq += 1
+                    self._send_one(flags=ACK, data="")
+                    # Close the connection and break out of the loop
+                    connection_closed = True
+                    break
             
-
-            # self.seq = cur_ack_seq
+            self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
         
         print("finishi send")
