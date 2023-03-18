@@ -332,6 +332,7 @@ class RawSocket:
             print(f"current _ack_seq: {self._ack_seq}")
 
         # Send ACK respond to FIN
+        print("Respond to FIN")
         print(f"current _ack_seq: {self._ack_seq}")
         self._ack_seq += 1
         self._send_one(ACK, "")
