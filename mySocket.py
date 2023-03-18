@@ -157,6 +157,7 @@ class RawSocket:
                     packet_number_to_send = i
                     break
                 data = buffer[seq_to_send]
+                self._seq = seq_to_send
                 self._send_one(flags=PSH_ACK, data=data)
                 seq_to_send += len(data)
 
@@ -164,6 +165,7 @@ class RawSocket:
             # Receive ACKs for the sent packets
             ack_seq_set = set()
             slow_flag = False
+            cur_ack_seq = -1
             for i in range(packet_number_to_send):
                 tcp_datagram = self._receive_one(timeout=5)
 
@@ -177,7 +179,7 @@ class RawSocket:
                     if tcp_datagram.ack_seq in ack_seq_set:
                         slow_flag = True
                     else:
-                        self._seq = max(self._seq, tcp_datagram.ack_seq)
+                        cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
                 
                 # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
@@ -187,7 +189,8 @@ class RawSocket:
                     # Close the connection and break out of the loop
                     connection_closed = True
                     break
-
+                    
+            self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
 
 
