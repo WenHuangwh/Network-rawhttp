@@ -155,7 +155,6 @@ class RawSocket:
                     packet_number_to_send = i
                     break
                 data = buffer[self._seq]
-                self._seq = seq_to_send
                 self._send_one(flags=PSH_ACK, data=data)
                 self._seq += len(data)
 
