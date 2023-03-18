@@ -161,7 +161,6 @@ class RawSocket:
                 print("for loop")
 
             # Receive ACKs for the sent packets
-            ack_seq_set = set()
             slow_flag = False
             cur_ack_seq = -1
             for i in range(window_size):
@@ -175,10 +174,10 @@ class RawSocket:
                 # If ACK is received, update adwnd and largest_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
-                    if tcp_datagram.ack_seq in ack_seq_set:
+                    if tcp_datagram.ack_seq < cur_ack_seq:
                         slow_flag = True
                     else:
-                        cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
+                        cur_ack_seq = tcp_datagram.ack_seq
                 
                 # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
