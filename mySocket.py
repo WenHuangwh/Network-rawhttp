@@ -167,7 +167,8 @@ class RawSocket:
             expected_largest_ack_seq = seq_to_send
 
             # Receive ACKs for the sent packets
-            for i in range(packet_number_to_send):
+            # for i in range(packet_number_to_send):
+            for i in range(1):
                 tcp_datagram = self._receive_one(timeout=5)
 
                 if not tcp_datagram:
@@ -195,8 +196,8 @@ class RawSocket:
             # There must be a packet drop 
             if self._seq != expected_largest_ack_seq:
                 self.update_congestion_control(slow_flag=True)
-            # else:
-            #     self.update_congestion_control(slow_flag=False)
+            else:
+                self.update_congestion_control(slow_flag=False)
 
 
 
