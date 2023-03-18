@@ -264,7 +264,7 @@ class RawSocket:
         start_time = time.time()
         buffer = None
         start_seq = self._ack_seq
-        
+
         while time.time() - start_time <= timeout and buffer == None:
             buffer = self._receive_all()
 
@@ -313,12 +313,9 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 receive_FIN = True
                 data_is_complete_seq = tcp_datagram.seq + payload_len
-                print(f"seq: {tcp_datagram.seq}")
-                print(f"FUNC FIN: com_seq: {data_is_complete_seq}, my_ack: {self._ack_seq}")
 
             # Duplicate packet received
             elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
-                print('duplicate')
                 dup_ack_counter += 1
                 if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
                     self._send_one(ACK, "")
@@ -336,13 +333,13 @@ class RawSocket:
                 
             # Update ack_seq and send messge to server
             while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
-                payload = buffer[self._ack_seq]
                 payload_len = len(payload)
                 buffer_size -= payload_len
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
+                payload = buffer[self._ack_seq]
 
         # Send ACK respond to FIN
         self._ack_seq += 1
