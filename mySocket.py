@@ -410,39 +410,83 @@ class RawSocket:
         return original_checksum == calculated_checksum
 
 
-    def calculate_checksum(self, packet):
-        """
-        Calculate the checksum of a packet in bytes. Referenced from
-        https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
-        Parameters
-        ----------
-        packet: bytes
-            Raw bytes of a packet
-        Returns
-        -------
-        int
-            Checksum of the packet
-        """
-        if len(packet) % 2 != 0:
-            packet += b'\0'
+    # def calculate_checksum(self, packet):
+    #     """
+    #     Calculate the checksum of a packet in bytes. Referenced from
+    #     https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
+    #     Parameters
+    #     ----------
+    #     packet: bytes
+    #         Raw bytes of a packet
+    #     Returns
+    #     -------
+    #     int
+    #         Checksum of the packet
+    #     """
+    #     if len(packet) % 2 != 0:
+    #         packet += b'\0'
 
-        res = sum(array.array("H", packet))
-        res = (res >> 16) + (res & 0xffff)
-        res += res >> 16
+    #     res = sum(array.array("H", packet))
+    #     res = (res >> 16) + (res & 0xffff)
+    #     res += res >> 16
 
-        return (~res) & 0xffff
+    #     return (~res) & 0xffff
 
 
-    def verify_tcp_checksum(self, packet):
-        tcp_packet = packet[20:]
-        source_address = socket.inet_aton(self._destIpAddr)
-        dest_address = socket.inet_aton(self._srcIpAddr)
-        pseudo_header = pack('!4s4sBBH',
-                             source_address, dest_address,
-                             0, socket.IPPROTO_TCP,
-                             len(tcp_packet))
+    # def verify_tcp_checksum(self, packet):
+    #     tcp_packet = packet[20:]
+    #     source_address = socket.inet_aton(self._destIpAddr)
+    #     dest_address = socket.inet_aton(self._srcIpAddr)
+    #     pseudo_header = pack('!4s4sBBH',
+    #                          source_address, dest_address,
+    #                          0, socket.IPPROTO_TCP,
+    #                          len(tcp_packet))
 
-        return self.calculate_checksum(pseudo_header + tcp_packet) == 0
+    #     return self.calculate_checksum(pseudo_header + tcp_packet) == 0
+
+
+    def verify_tcp_checksum(self, bytes_packet):
+        ip_header_bytes = bytes_packet[:20]
+        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        protocol = ip_header[6]
+
+        if protocol != 6:
+            print("Not a TCP packet.")
+            return False
+
+        ip_header_length = (ip_header[0] & 0x0F) * 4
+        tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
+        tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
+        tcp_data = bytes_packet[ip_header_length + tcp_header_length:]
+
+        src_ip, dst_ip = ip_header[8], ip_header[9]
+        tcp_length = len(tcp_header_bytes) + len(tcp_data)
+
+        pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
+
+        def calculate_checksum(data):
+            checksum = 0
+            for i in range(0, len(data), 2):
+                if i + 1 < len(data):
+                    word = (data[i] << 8) + data[i + 1]
+                else:
+                    word = (data[i] << 8)
+                checksum += word
+            checksum = (checksum >> 16) + (checksum & 0xFFFF)
+            checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
+            return checksum
+
+        if len(tcp_data) % 2 != 0:
+            tcp_data += b'\x00'
+
+        checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
+        calculated_checksum = calculate_checksum(checksum_data)
+
+        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
+        is_valid = (calculated_checksum == original_checksum)
+        print(f"Original TCP checksum: {original_checksum}")
+        print(f"Calculated TCP checksum: {calculated_checksum}")
+        return is_valid
 
     
 
