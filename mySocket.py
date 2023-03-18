@@ -241,8 +241,6 @@ class RawSocket:
         while time.time() - start_time <= timeout and buffer == None:
             buffer = self._receive_all()
 
-        self.close()
-
         received_data = []
 
         while start_seq in buffer:
@@ -315,6 +313,7 @@ class RawSocket:
         self._ack_seq += 1
         self._send_one(ACK, "")
         self._send_one(FIN_ACK, "")
+        self._receive_one()
 
         return buffer
 
@@ -365,32 +364,30 @@ class RawSocket:
         # Send FIN packet to the server
         self._send_one(FIN, "")
 
-        # We wait for ACK packet,
+        # We wait for FIN_ACK packet,
         # otherwise, if time is out, we send FIN
         # Start the timer
         start_time = time.time()
-        receive_ACK = False
+        receive_FIN_ACK = False
 
-        print('Start to close')
         while time.time() - start_time <= timeout:
             
             tcp_datagram = self._receive_one()
             if tcp_datagram is None:
-                print('Get None')
                 continue
 
-            if tcp_datagram.flags & ACK:
+            if tcp_datagram.flags & FIN_ACK:
                 # Server acknowledged the FIN_ACK, break the loop
-                print("Receive ACK in graceful close")
-                receive_ACK = True
+                receive_FIN_ACK = True
                 break
 
-        if not receive_ACK:
-            print("Send FIN in graceful close")
-            self._send_one(FIN, "")
+        # Send ACK to the server's FIN_ACK, completing the four-way handshake
+        if receive_FIN_ACK:
+            self._send_one(ACK, "")
 
         self.send_socket.close()
         self.recv_socket.close()
+
 
 
     def verify_tcp_checksum(self, addr, length, tcp_checksum):
