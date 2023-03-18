@@ -263,6 +263,8 @@ class RawSocket:
     def receive_all(self, timeout = 60):
         start_time = time.time()
         buffer = None
+        start_seq = self._ack_seq
+        
         while time.time() - start_time <= timeout and buffer == None:
             buffer = self._receive_all()
 
