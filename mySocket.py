@@ -162,19 +162,22 @@ class RawSocket:
 
 
             # Receive ACKs for the sent packets
-            
+            ack_seq_set = set()
+            slow_flag = False
             for i in range(packet_number_to_send):
                 tcp_datagram = self._receive_one(timeout=5)
 
                 if not tcp_datagram:
-                    self.update_congestion_control(slow_flag=True)
+                    slow_flag = True
                     break
 
                 # If ACK is received, update adwnd and largest_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
-                    self._seq = max(self._seq, tcp_datagram.ack_seq)
-                    self.update_congestion_control(slow_flag=False)
+                    if tcp_datagram.ack_seq in ack_seq_set:
+                        slow_flag = True
+                    else:
+                        self._seq = max(self._seq, tcp_datagram.ack_seq)
                 
                 # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
@@ -184,6 +187,9 @@ class RawSocket:
                     # Close the connection and break out of the loop
                     connection_closed = True
                     break
+
+            self.update_congestion_control(slow_flag)
+
 
 
     def update_congestion_control(self, slow_flag):
