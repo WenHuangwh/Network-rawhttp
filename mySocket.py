@@ -210,9 +210,9 @@ class RawSocket:
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
             # print("Invalid port")
             return False
-        # All checks passed, return True
-        # if not self.verify_ipv4_checksum(packet):
-        #     return False
+        All checks passed, return True
+        if not self.verify_ipv4_checksum(packet):
+            return False
         if not self.verify_tcp_checksum(packet):
             return False
         return True
@@ -413,10 +413,11 @@ class RawSocket:
             checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
             return checksum
 
-        if len(tcp_data) % 2 != 0:
-            tcp_data += b'\x00'
-
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
+        
+        if len(checksum_data) % 2 != 0:
+            checksum_data += b'\x00'
+
         calculated_checksum = calculate_checksum(checksum_data)
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
@@ -424,6 +425,7 @@ class RawSocket:
         print(f"Original TCP checksum: {original_checksum}")
         print(f"Calculated TCP checksum: {calculated_checksum}")
         return is_valid
+
 
     def verify_ipv4_checksum(self, byte_packet):
         header = byte_packet[:20]
