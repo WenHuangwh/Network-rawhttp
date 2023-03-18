@@ -264,7 +264,7 @@ class RawSocket:
         start_time = time.time()
         buffer = None
         while time.time() - start_time <= timeout:
-            buffer _receive_all()
+            buffer = self._receive_all()
 
         # self.close
 
