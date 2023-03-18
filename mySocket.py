@@ -189,8 +189,8 @@ class RawSocket:
                     # Close the connection and break out of the loop
                     connection_closed = True
                     break
-                    
-            self.seq = cur_ack_seq
+
+            # self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
 
 
