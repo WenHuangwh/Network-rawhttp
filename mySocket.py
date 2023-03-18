@@ -147,11 +147,11 @@ class RawSocket:
         
         # Keep sending data until the buffer is empty
         while self._seq in buffer:
-            packet_number_to_send = min(self.cwnd, adwnd // self.mss)
+            window_size = min(self.cwnd, adwnd // self.mss)
             
             # Send packets within the window size
-            for i in range(packet_number_to_send):
-                if seq_to_send not in buffer:
+            for i in range(window_size):
+                if self._seq not in buffer:
                     packet_number_to_send = i
                     break
                 data = buffer[seq_to_send]
