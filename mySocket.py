@@ -196,12 +196,11 @@ class RawSocket:
 
 
     def update_congestion_control(self, slow_flag):
-        if not slow_flag and self.cwnd < self.maxcwnd:
-            self.cwnd += 1
-            # if self.cwnd * 2 <= self.maxcwnd:
-            #     self.cwnd *= 2
-            # elif self.cwnd < self.maxcwnd:
-            #     self.cwnd += 1
+        if not slow_flag:
+            if self.cwnd * 2 <= self.maxcwnd:
+                self.cwnd *= 2
+            elif self.cwnd < self.maxcwnd:
+                self.cwnd += 1
         else:
             self.cwnd = 1
 
