@@ -147,7 +147,6 @@ class RawSocket:
         
         # Keep sending data until the buffer is empty
         while self._seq < buffer_key:
-            print("while loop")
             window_size = min(self.cwnd, adwnd // self.mss)
             
             # Send packets within the window size
@@ -158,20 +157,18 @@ class RawSocket:
                 data = buffer[self._seq]
                 self._send_one(flags=PSH_ACK, data=data)
                 self._seq += len(data)
-                print("for loop")
 
             # Receive ACKs for the sent packets
             slow_flag = False
             cur_ack_seq = -1
             for i in range(window_size):
                 tcp_datagram = self._receive_one(timeout=5)
-                print("for loop 2")
 
                 if not tcp_datagram:
                     slow_flag = True
                     break
 
-                # If ACK is received, update adwnd and largest_ack_seq
+                # If ACK is received, update adwnd and cur_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
                     if tcp_datagram.ack_seq < cur_ack_seq:
@@ -190,9 +187,6 @@ class RawSocket:
             
             self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
-        
-        print("finishi send")
-
 
 
     def update_congestion_control(self, slow_flag):
@@ -217,9 +211,8 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        # tcp_header_with_payload = packet[20:]
-        # if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(tcp_header_with_payload, len(tcp_header_with_payload), tcp_datagram.checksum):
-        #     return False
+        if not self.verify_ipv4_checksum(packet) or not self.verify_tcp_checksum(packet):
+            return False
         return True
 
     def _receive_one(self, timeout=60, size=65535):
@@ -387,32 +380,52 @@ class RawSocket:
         self.recv_socket.close()
 
 
+    def verify_tcp_checksum(self, bytes_packet):
+        ip_header_bytes = bytes_packet[:20]
+        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        protocol = ip_header[6]
 
-    def verify_tcp_checksum(self, addr, length, tcp_checksum):
-        nleft = length
-        total_sum = 0
-        index = 0
+        if protocol != 6:
+            print("Not a TCP packet.")
+            return False
 
-        while nleft > 1:
-            total_sum += int.from_bytes(addr[index:index+2], byteorder='big')
-            index += 2
-            nleft -= 2
+        ip_header_length = (ip_header[0] & 0x0F) * 4
+        tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
+        tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
+        tcp_data = bytes_packet[ip_header_length + tcp_header_length:]
 
-        if nleft == 1:
-            answer = int.from_bytes(addr[index:index+1], byteorder='big')
-            total_sum += answer
+        src_ip, dst_ip = ip_header[8], ip_header[9]
+        tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
-        total_sum = (total_sum >> 16) + (total_sum & 0xFFFF)
-        total_sum += (total_sum >> 16)
-        answer = ~total_sum & 0xFFFF
-        if answer == tcp_checksum:
-            print("Right TCP")
-        else:
-            print(f"Header: {tcp_checksum}, Cal: {answer}")
-        return answer == tcp_checksum
+        pseudo_header = src_ip + dst_ip + struct.pack('!BBH', 0, protocol, tcp_length)
 
+        def calculate_checksum(data):
+            checksum = 0
+            for i in range(0, len(data), 2):
+                if i + 1 < len(data):
+                    word = (data[i] << 8) + data[i + 1]
+                else:
+                    word = (data[i] << 8)
+                checksum += word
+            checksum = (checksum >> 16) + (checksum & 0xFFFF)
+            checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
+            return checksum
 
-   
+        if len(tcp_data) % 2 != 0:
+            tcp_data += b'\x00'
+
+        checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
+        print("Test the new calculation method, TCP checksum: ", self.checksum(checksum_data))
+
+        calculated_checksum = calculate_checksum(checksum_data)
+
+        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
+        is_valid = (calculated_checksum == original_checksum)
+        print(f"Original TCP checksum: {original_checksum}")
+        print(f"Calculated TCP checksum: {calculated_checksum}")
+
+        return is_valid
+
     def verify_ipv4_checksum(self, byte_packet):
         header = byte_packet[:20]
 
@@ -431,17 +444,17 @@ class RawSocket:
             return False
 
         original_checksum = int.from_bytes(header[10:12], byteorder='big')
-        print("Original IP checksum:", original_checksum)
-
         header = header[:10] + b'\x00\x00' + header[12:]
+        print("Test the new calculation method, IP checksum: ", self.checksum(header))
 
         values = unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         calculated_checksum = ~checksum & 0xFFFF
-
-        print("Calculated IP checksum:", calculated_checksum)
+        
+        print(f"Original IP checksum: {original_checksum}")
+        print(f"Calculated IP checksum: {calculated_checksum}")
 
         return original_checksum == calculated_checksum
         
