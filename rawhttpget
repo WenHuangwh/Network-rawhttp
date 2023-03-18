@@ -69,9 +69,9 @@ def main():
     rawSocket.send(request)
     header, body = rawSocket.receive_all()
 
-    # if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
-    #     print("HTTP header error")
-    #     return
+    if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
+        print("This is not HTTP 200")
+        return
 
     # Save the payload to a .log file
     with open(filename, "wb") as log_file:
