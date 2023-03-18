@@ -46,7 +46,7 @@ class RawSocket:
             self.tcp_adwind = socket.htons (self.rwnd)
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
             # Must be an even number
-            self.mss = 2
+            self.mss = 1460
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
