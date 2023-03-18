@@ -223,8 +223,7 @@ class RawSocket:
         #     return False
         return True
 
-    def _receive_one(self, size=20480, timeout=60):
-        cur_time = time.time()
+    def _receive_one(self, size=65535):
         received_pkt = self.recv_socket.recv(size)
         if len(received_pkt) == 0:
             return None
