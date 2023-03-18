@@ -421,32 +421,14 @@ class RawSocket:
         return (~res) & 0xffff
 
     def verify_tcp_checksum(self, raw_packet):
-        ip_header_bytes = raw_packet[:20]
-        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
-        protocol = ip_header[6]
+        source_address = socket.inet_aton(self._destIpAddr)
+        dest_address = socket.inet_aton(self._srcIpAddr)
+        pseudo_header = pack(PSEUDO_HEADER_FORMAT,
+                             source_address, dest_address,
+                             0, socket.IPPROTO_TCP,
+                             len(raw_bytes))
 
-        if protocol != 6:
-            print("Not a TCP packet.")
-            return False
-
-        ip_header_length = (ip_header[0] & 0x0F) * 4
-        tcp_header_length = ((raw_packet[ip_header_length + 12] >> 4) & 0xF) * 4
-        tcp_header_bytes = raw_packet[ip_header_length:ip_header_length + tcp_header_length]
-        tcp_data = raw_packet[ip_header_length + tcp_header_length:]
-
-        src_ip, dst_ip = ip_header[8], ip_header[9]
-        src_address = socket.inet_aton(src_ip)
-        dst_address = socket.inet_aton(dst_ip)
-
-        tcp_length = len(tcp_header_bytes) + len(tcp_data)
-
-        pseudo_header = pack('!4s4sBBH', src_address, dst_address, 0, protocol, tcp_length)
-        checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = self.calculate_checksum(checksum_data)
-
-        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
-        print(f"cc: {calculated_checksum}, oc: {original_checksum}")
-        is_valid = (calculated_checksum == original_checksum)
+        return calculate_checksum(pseudo_header + raw_bytes) == 0
 
         return is_valid
 
