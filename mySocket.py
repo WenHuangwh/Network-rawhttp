@@ -149,8 +149,6 @@ class RawSocket:
         while self._seq in buffer:
             packet_number_to_send = min(self.cwnd, adwnd // self.mss)
             
-            # Sequence number of each outgoing packets
-            seq_to_send = self._seq
             # Send packets within the window size
             for i in range(packet_number_to_send):
                 if seq_to_send not in buffer:
@@ -159,7 +157,7 @@ class RawSocket:
                 data = buffer[seq_to_send]
                 self._seq = seq_to_send
                 self._send_one(flags=PSH_ACK, data=data)
-                seq_to_send += len(data)
+                self._seq += len(data)
 
 
             # Receive ACKs for the sent packets
@@ -169,26 +167,26 @@ class RawSocket:
             for i in range(packet_number_to_send):
                 tcp_datagram = self._receive_one(timeout=5)
 
-                if not tcp_datagram:
-                    slow_flag = True
-                    break
+                # if not tcp_datagram:
+                #     slow_flag = True
+                #     break
 
-                # If ACK is received, update adwnd and largest_ack_seq
-                elif tcp_datagram.flags & ACK == ACK:
-                    adwnd = min(65535, tcp_datagram.adwind)
-                    if tcp_datagram.ack_seq in ack_seq_set:
-                        slow_flag = True
-                    else:
-                        cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
+                # # If ACK is received, update adwnd and largest_ack_seq
+                # elif tcp_datagram.flags & ACK == ACK:
+                #     adwnd = min(65535, tcp_datagram.adwind)
+                #     if tcp_datagram.ack_seq in ack_seq_set:
+                #         slow_flag = True
+                #     else:
+                #         cur_ack_seq = max(cur_ack_seq, tcp_datagram.ack_seq)
                 
-                # If FIN is received, acknowledge and close the connection
-                elif tcp_datagram.flags & FIN == FIN:
-                    # Acknowledge the received FIN packet
-                    self._ack_seq += 1
-                    self._send_one(flags=ACK, data="")
-                    # Close the connection and break out of the loop
-                    connection_closed = True
-                    break
+                # # If FIN is received, acknowledge and close the connection
+                # elif tcp_datagram.flags & FIN == FIN:
+                #     # Acknowledge the received FIN packet
+                #     self._ack_seq += 1
+                #     self._send_one(flags=ACK, data="")
+                #     # Close the connection and break out of the loop
+                #     connection_closed = True
+                #     break
 
             # self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
