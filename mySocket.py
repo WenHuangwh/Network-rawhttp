@@ -308,8 +308,10 @@ class RawSocket:
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
+            print(f"current _ack_seq: {self._ack_seq}")
 
         # Send ACK respond to FIN
+        print(f"current _ack_seq: {self._ack_seq}")
         self._ack_seq += 1
         self._send_one(ACK, "")
         self._send_one(FIN_ACK, "")
