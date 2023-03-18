@@ -154,7 +154,7 @@ class RawSocket:
                 segments_in_flight.append((self._seq, segment))
 
             # Wait for the ACK from the server
-            tcp_datagram = self._receive_one(timeout=60)
+            tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:  # Timeout occurred
                 # Timeout handling
