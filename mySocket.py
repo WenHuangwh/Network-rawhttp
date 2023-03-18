@@ -224,7 +224,7 @@ class RawSocket:
         return True
 
     def _receive_one(self, size=65535):
-        received_pkt = self.recv_socket.recv(size)
+        received_pkt = self.recv_socket.recv()
         if len(received_pkt) == 0:
             return None
         if self.check_incomingPKT(received_pkt):
