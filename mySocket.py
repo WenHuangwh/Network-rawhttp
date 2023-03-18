@@ -260,60 +260,27 @@ class RawSocket:
                 return tcp_datagram
         return None
 
-    def receive_all1(self):
+    def receive_all(self, timeout = 60):
+        start_time = time.time()
+        buffer = None
+        while time.time() - start_time <= timeout:
+            buffer _receive_all()
+
+        # self.close
+
         received_data = []
 
-        while True:
-            # Receive a packet
-            tcp_datagram = self._receive_one()
-
-            # If no packet is received, continue waiting
-            if tcp_datagram is None:
-                continue
-
-            # Check if the received packet is an ACK with payload
-            if tcp_datagram.flags & PSH_ACK and not tcp_datagram.flags & FIN and tcp_datagram.ack_seq == self._seq:
-                # Check the order of the packet
-                if tcp_datagram.seq == self._ack_seq:
-                    # Packet is in order, update the ack_seq
-                    self._ack_seq += len(tcp_datagram.payload)
-
-                    # Send ACK to the server
-                    self._send_one(ACK)
-
-                    # Append the payload to the received_data list
-                    received_data.append(tcp_datagram.payload)
-
-                    # Check if the received packet has the FIN flag set
-                    if tcp_datagram.flags & FIN:
-                        # Send ACK for the FIN flag
-                        self._ack_seq += 1
-                        self._send_one(ACK)
-                        break
-                else:
-                    # Out of order packet received
-                    print("Out of order packet received. Sending ACK with the expected sequence number...")
-                    self._send_one(ACK)
-
-            elif tcp_datagram.flags & FIN or (tcp_datagram.flags & (FIN | PSH | ACK)) == (FIN | PSH | ACK):
-                print('finish')
-                self._ack_seq += 1
-                self._send_one(ACK, "")
-                break
-            else:
-                print("Unexpected packet received. Waiting for data...")
-            total_payload = b''.join(received_data)
-
-            # print(f'current lenght of recv {len(total_payload) / 1024 / 1024}')
+        while start_seq in buffer:
+            received_data.append(buffer[start_seq])
+            start_seq += len(buffer[start_seq])
 
         total_payload = b''.join(received_data)
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
-        return body
+        return header, body
+        
 
-
-
-    def receive_all2(self, buffer_limit = 65535):
+    def _receive_all(self, buffer_limit = 65535):
         buffer = {}
         buffer_size = 0
 
@@ -380,17 +347,8 @@ class RawSocket:
         self._ack_seq += 1
         self._send_one(ACK, "")
         self._send_one(FIN, "")
-        self.close()
-        received_data = []
 
-        while start_seq in buffer:
-            received_data.append(buffer[start_seq])
-            start_seq += len(buffer[start_seq])
-
-        total_payload = b''.join(received_data)
-        header, _, body = total_payload.partition(b'\r\n\r\n')
-
-        return header, body
+        return buffer
 
     # def unpack_ip_packet(self, packet):
     #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
