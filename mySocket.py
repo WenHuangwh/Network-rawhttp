@@ -160,11 +160,6 @@ class RawSocket:
                 self._send_one(flags=PSH_ACK, data=data)
                 seq_to_send += len(data)
 
-            # Current largest ack_seq from incoming packets
-            largest_ack_seq = -1
-            # If all packets transmit success
-            # This should be the largest ack_seq in this loop
-            expected_largest_ack_seq = seq_to_send
 
             # Receive ACKs for the sent packets
             for i in range(packet_number_to_send):
@@ -176,10 +171,10 @@ class RawSocket:
                 # If ACK is received, update adwnd and largest_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
-                    largest_ack_seq = max(largest_ack_seq, tcp_datagram.ack_seq)
-                    self._seq = largest_ack_seq
-                    if largest_ack_seq == expected_largest_ack_seq:
-                        break
+                    if tcp_datagram.ack_seq <= self._seq:
+                        self.update_congestion_control(slow_flag=True)
+                    else:
+                        self._seq = tcp_datagram.ack_seq
                 
                 # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
@@ -191,9 +186,9 @@ class RawSocket:
                     connection_closed = True
                     break
             
-            # If current self._seq is not expected_largest_ack_seq
+            # If current self._seq is not seq_to_send
             # There must be a packet drop 
-            if self._seq != expected_largest_ack_seq:
+            if self._seq != seq_to_send:
                 self.update_congestion_control(slow_flag=True)
             else:
                 self.update_congestion_control(slow_flag=False)
