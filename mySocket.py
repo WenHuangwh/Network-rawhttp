@@ -94,7 +94,6 @@ class RawSocket:
         tcp_dest = self._destPort
         tcp_seq = self._seq
         tcp_ack_seq = self._ack_seq
-        print(f"send tcp ack_seq: {self._ack_seq}")
         tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
         #tcp flags
         tcp_window = self.tcp_adwind	#	maximum allowed window size
