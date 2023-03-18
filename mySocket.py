@@ -45,7 +45,7 @@ class RawSocket:
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (self.rwnd)
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
-            self.mss = 1460
+            self.mss = 2
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
@@ -256,12 +256,12 @@ class RawSocket:
             tcp_datagram = self._receive_one()
 
             if tcp_datagram is None:
-                # timeout_counter += 1
-                # self._send_one(ACK, "") 
-                # if timeout_counter >= max_timeouts:
-                #     print("Time out, close connection")
-                #     self.close()
-                #     return buffer
+                timeout_counter += 1
+                self._send_one(ACK, "") 
+                if timeout_counter >= max_timeouts:
+                    print("Time out, close connection")
+                    self.close()
+                    return buffer
                 continue
             else:
                 timeout_counter = 0
