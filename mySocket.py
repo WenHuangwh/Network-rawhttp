@@ -280,7 +280,7 @@ class RawSocket:
                 self._send_one(ACK, "") 
                 if timeout_counter >= max_timeouts:
                     self.close()
-                    break
+                    return buffer
                 continue
             else:
                 timeout_counter = 0
@@ -327,6 +327,7 @@ class RawSocket:
                 self._ack_seq %= 0x100000000
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
+
             print(f"current _ack_seq: {self._ack_seq}")
 
         # Send ACK respond to FIN
