@@ -147,6 +147,7 @@ class RawSocket:
         
         # Keep sending data until the buffer is empty
         while self._seq < buffer_key:
+            print("while loop")
             window_size = min(self.cwnd, adwnd // self.mss)
             
             # Send packets within the window size
@@ -157,7 +158,6 @@ class RawSocket:
                 data = buffer[self._seq]
                 self._send_one(flags=PSH_ACK, data=data)
                 self._seq += len(data)
-
 
             # Receive ACKs for the sent packets
             ack_seq_set = set()
@@ -186,6 +186,7 @@ class RawSocket:
                 #     # Close the connection and break out of the loop
                 #     connection_closed = True
                 #     break
+            
 
             # self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
