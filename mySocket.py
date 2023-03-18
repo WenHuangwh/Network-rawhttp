@@ -19,12 +19,11 @@ FIN_PSH_ACK = 0x19 # 0b00011001
 
 class RawSocket:
 
-    def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port, timeout=60):
+    def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port):
         try:
             # Creates two raw sockets for sending and receiving packets.
             self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
             self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
-            self.recv_socket.settimeout(timeout)
             self._srcIpAddr = src_ipAddr
             self._destIpAddr = dest_ipAddr
             # Choosing a random port number within the dynamic allocation range 
@@ -205,8 +204,6 @@ class RawSocket:
             else:
                 print("Unexpected packet received. Waiting for ACK...")
 
-
-
     # Recv
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
@@ -238,16 +235,11 @@ class RawSocket:
             return None
 
     def receive_all(self):
-        start_time = time.time()
         buffer = None
         start_seq = self._ack_seq
-
         buffer = self._receive_all()
 
-        print("buffer received")
-
         received_data = []
-
         while start_seq in buffer:
             received_data.append(buffer[start_seq])
             start_seq += len(buffer[start_seq])
@@ -269,6 +261,7 @@ class RawSocket:
         dup_ack_counter = 0
         timeout_counter = 0
         max_timeouts = 3
+        max_dup = 3
 
         receive_FIN = False
 
@@ -280,8 +273,8 @@ class RawSocket:
                 timeout_counter += 1
                 self._send_one(ACK, "") 
                 if timeout_counter >= max_timeouts:
+                    print("Time out, close connection")
                     self.close()
-                    print("Time out, send buffer")
                     return buffer
                 continue
             else:
@@ -291,8 +284,6 @@ class RawSocket:
                 continue
 
             if tcp_datagram.flags & FIN == FIN:
-                print(f"FIN pkt: seq: {tcp_datagram.seq}")
-                print(f"FIN pkt: paload len: { len(tcp_datagram.payload)}")
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
@@ -304,12 +295,12 @@ class RawSocket:
             # Duplicate packet received
             elif tcp_datagram.seq < self._ack_seq or self._ack_seq in buffer:  
                 dup_ack_counter += 1
-                if dup_ack_counter >= 3:  # Send duplicate ACK for fast retransmit
+                if dup_ack_counter >= max_dup:  # Send duplicate ACK for fast retransmit
                     self._send_one(ACK, "")
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
 
-            # Store valid packets in buffer
+            # Store valid packets in buffer: both in order or out of order
             elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit:
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
@@ -318,7 +309,6 @@ class RawSocket:
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
 
-            
             # Update ack_seq and send messge to server
             while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
                 payload = buffer[self._ack_seq]
@@ -329,11 +319,7 @@ class RawSocket:
                 self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
 
-            print(f"current _ack_seq: {self._ack_seq}")
-
         # Send ACK respond to FIN
-        print("Respond to FIN")
-        print(f"current _ack_seq: {self._ack_seq}")
         self._ack_seq += 1
         self._send_one(ACK, "")
         self._send_one(FIN_ACK, "")
@@ -381,22 +367,19 @@ class RawSocket:
             self._send_one(ACK, "")
             print("Connected")
             return True
-        print("Receive time expired")
+        print("Connect failed")
         return False
 
     def close(self):
         # Send FIN packet to the server
         self._send_one(FIN, "")
 
-        # We wait for FIN_ACK packet,
-        # otherwise, if time is out, we send FIN
-        # Start the timer
+        # Wait for FIN_ACK packet,
         start_time = time.time() 
         tcp_datagram = self._receive_one()
 
         if tcp_datagram != None and tcp_datagram.flags & FIN_ACK:
             # Server acknowledged the FIN_ACK, break the loop
-            print("FIN_ACK received")
             self._send_one(ACK, "")
             
         self.send_socket.close()
