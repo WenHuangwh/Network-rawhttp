@@ -322,7 +322,7 @@ class RawSocket:
                     dup_ack_counter = 0
 
             # 
-            elif self._ack_seq = tcp_datagram.seq:
+            elif self._ack_seq == tcp_datagram.seq:
                 buffer_size -= payload_len
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
