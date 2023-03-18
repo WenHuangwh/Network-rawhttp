@@ -189,6 +189,8 @@ class RawSocket:
 
             # self.seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
+        
+        print("finishi send")
 
 
 
