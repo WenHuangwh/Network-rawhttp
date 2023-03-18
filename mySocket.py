@@ -134,30 +134,6 @@ class RawSocket:
         self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
 
-    # def send(self, data):
-    #     # Split the data into segments according to the MSS
-    #     segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
-
-    #     for segment in segments:
-    #         if len(segment) % 2 == 1:
-    #             segment += " "
-    #         # Send the data segment
-    #         self._send_one(PSH_ACK, segment)
-    #         self._seq += len(segment)
-
-    #         # Wait for the ACK from the server
-    #         while True:
-    #             tcp_datagram = self._receive_one()
-    #             if tcp_datagram is None:
-    #                 continue
-    #             # Check if the received packet is an ACK for the current data segment
-    #             if tcp_datagram.flags == ACK and tcp_datagram.ack_seq == self._seq:
-    #                 # Update the acknowledgement sequence number
-    #                 self._ack_seq = tcp_datagram.seq + len(tcp_datagram.payload)
-    #                 break
-    #             else:
-    #                 print("Unexpected packet received. Waiting for ACK...")
-
     def send(self, data):
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
 
@@ -233,7 +209,7 @@ class RawSocket:
     # Recv
     def check_incomingPKT(self, packet):
         # Extract the IP and TCP headers from the packet
-        ip_datagram, tcp_header, tcp_payload = self.unpack_ip_packet(packet)
+        ip_datagram = self.unpack_ip_packet(packet)
         tcp_datagram = self.unpack_tcp_packet(packet)
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
             # print("Invalid ip address")
@@ -249,15 +225,14 @@ class RawSocket:
 
     def _receive_one(self, size=20480, timeout=60):
         cur_time = time.time()
-        while time.time() - cur_time <= timeout:
-            received_pkt = self.recv_socket.recv(size)
-            # print(received_pkt.hex())
-            if len(received_pkt) == 0:
-                continue
-            if self.check_incomingPKT(received_pkt):
-                ip_datagram = self.unpack_ip_packet(received_pkt)
-                tcp_datagram = self.unpack_tcp_packet(received_pkt)
-                return tcp_datagram
+        received_pkt = self.recv_socket.recv(size)
+        # print(received_pkt.hex())
+        if len(received_pkt) == 0:
+            continue
+        if self.check_incomingPKT(received_pkt):
+            ip_datagram = self.unpack_ip_packet(received_pkt)
+            tcp_datagram = self.unpack_tcp_packet(received_pkt)
+            return tcp_datagram
         return None
 
     def receive_all(self, timeout = 60):
@@ -303,9 +278,8 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            payload_len = len(tcp_datagram.payload)
-
             if tcp_datagram.flags & FIN != 0:
+                payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                 buffer_size += payload_len
@@ -321,31 +295,23 @@ class RawSocket:
                     # Reset the duplicate ACK counter
                     dup_ack_counter = 0
 
-            # 
-            elif self._ack_seq == tcp_datagram.seq:
-                buffer_size -= payload_len
-                self._ack_seq += payload_len
-                self._ack_seq %= 0x100000000
-                self.rwnd = max(1, buffer_limit - buffer_size)
-                self._send_one(ACK, "")
-                buffer[tcp_datagram.seq] = tcp_datagram.payload
-                # Update ack_seq and send message to server
-                while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
-                    payload = buffer[self._ack_seq]
-                    payload_len = len(payload)
-                    buffer_size -= payload_len
-                    self._ack_seq += payload_len
-                    self._ack_seq %= 0x100000000
-                    self.rwnd = max(1, buffer_limit - buffer_size)
-                    self._send_one(ACK, "") 
-
             # Store valid packets in buffer
-            elif self._ack_seq < tcp_datagram.seq <= self._ack_seq + buffer_limit:
+            elif self._ack_seq <= tcp_datagram.seq <= self._ack_seq + buffer_limit:
+                payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
                 buffer_size += payload_len
                 # Reset the duplicate ACK counter
                 dup_ack_counter = 0
+                
+            # Update ack_seq and send messge to server
+            while self._ack_seq in buffer and self._ack_seq < data_is_complete_seq:
+                payload = buffer[self._ack_seq]
+                payload_len = len(payload)
+                buffer_size -= payload_len
+                self._ack_seq += payload_len
+                self._ack_seq %= 0x100000000
+                self.rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
 
         # Send ACK respond to FIN
@@ -354,17 +320,6 @@ class RawSocket:
         self._send_one(FIN, "")
 
         return buffer
-
-    # def unpack_ip_packet(self, packet):
-    #     IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
-    #     ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
-    #     version = ip_header[0] >> 4
-    #     header_length = (ip_header[0] & 0xF) * 4
-    #     ttl = ip_header[5]
-    #     protocol = ip_header[6]
-    #     src_address = socket.inet_ntoa(ip_header[8])
-    #     dest_address = socket.inet_ntoa(ip_header[9])
-    #     return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
 
     def unpack_ip_packet(self, packet):
         IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
@@ -375,23 +330,7 @@ class RawSocket:
         protocol = ip_header[6]
         src_address = socket.inet_ntoa(ip_header[8])
         dest_address = socket.inet_ntoa(ip_header[9])
-
-        ip_header_info = IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
-
-        # Check if the packet is TCP
-        if protocol != socket.IPPROTO_TCP:
-            raise ValueError("The packet is not a TCP packet")
-
-        # Parse TCP header
-        tcp_header_len = ((packet[header_length + 12] >> 4) & 0x0F) * 4
-        tcp_header = packet[header_length:header_length + tcp_header_len]
-
-        # Extract the TCP payload
-        total_length = int.from_bytes(packet[2:4], byteorder='big')
-        tcp_payload = packet[header_length + tcp_header_len:total_length]
-
-        return ip_header_info, tcp_header, tcp_payload
-
+        return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
 
     def unpack_tcp_packet(self, packet):
         TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
