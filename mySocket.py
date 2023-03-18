@@ -175,6 +175,7 @@ class RawSocket:
 
                 # If ACK is received, update adwnd and largest_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
+                    self.update_congestion_control(slow_flag=False)
                     adwnd = min(65535, tcp_datagram.adwind)
                     largest_ack_seq = max(largest_ack_seq, tcp_datagram.ack_seq)
                     self._seq = largest_ack_seq
