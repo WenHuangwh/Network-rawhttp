@@ -263,7 +263,7 @@ class RawSocket:
     def receive_all(self, timeout = 60):
         start_time = time.time()
         buffer = None
-        while time.time() - start_time <= timeout:
+        while time.time() - start_time <= timeout and buffer == None:
             buffer = self._receive_all()
 
         self.close()
@@ -304,7 +304,6 @@ class RawSocket:
                 continue
 
             if tcp_datagram.flags & FIN != 0:
-                print("FIN received")
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
                     buffer[tcp_datagram.seq] = tcp_datagram.payload 
