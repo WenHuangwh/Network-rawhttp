@@ -211,10 +211,10 @@ class RawSocket:
             # print("Invalid port")
             return False
         # All checks passed, return True
-        if not self.verify_ipv4_checksum(packet):
-            return False
-        # if not self.verify_tcp_checksum(packet):
+        # if not self.verify_ipv4_checksum(packet):
         #     return False
+        if not self.verify_tcp_checksum(packet):
+            return False
         return True
 
     def _receive_one(self, timeout=60, size=65535):
