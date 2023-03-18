@@ -45,7 +45,7 @@ class RawSocket:
             # Sets the initial TCP advertised window size to 20480 bytes.
             self.tcp_adwind = socket.htons (self.rwnd)
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
-            self.mss = 2
+            self.mss = 1460
         except socket.error as e:
             # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
@@ -134,18 +134,23 @@ class RawSocket:
         adwnd = 65535
         segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
         buffer = {}
+        # Use sequence number as key for buffer
         buffer_key = self._seq
 
+        # Create a buffer of the data segments with their sequence numbers
         for data in segments:
             if len(data) % 2 == 1:
                 data += " "
             buffer[buffer_key] = data
             buffer_key += len(data)
-            
+        
+        # Keep sending data until the buffer is empty
         while self._seq in buffer:
             packet_number_to_send = min(self.cwnd, adwnd // self.mss)
             
+            # Sequence number of each outgoing packets
             seq_to_send = self._seq
+            # Send packets within the window size
             for i in range(packet_number_to_send):
                 if seq_to_send not in buffer:
                     packet_number_to_send = i
@@ -154,27 +159,44 @@ class RawSocket:
                 self._send_one(flags=PSH_ACK, data=data)
                 seq_to_send += len(data)
 
+            # Current largest ack_seq from incoming packets
             largest_ack_seq = -1
+            # If all packets transmit success
+            # This should be the largest ack_seq in this loop
             expected_largest_ack_seq = seq_to_send
 
+            # Receive ACKs for the sent packets
             for i in range(packet_number_to_send):
                 tcp_datagram = self._receive_one(timeout=5)
 
                 if not tcp_datagram:
                     break
 
-                if tcp_datagram.flags & ACK == ACK:
+                # If ACK is received, update adwnd and largest_ack_seq
+                elif tcp_datagram.flags & ACK == ACK:
                     adwnd = min(65535, tcp_datagram.adwind)
                     largest_ack_seq = max(largest_ack_seq, tcp_datagram.ack_seq)
                     self._seq = largest_ack_seq
                     if largest_ack_seq == expected_largest_ack_seq:
                         break
                 
-                # if tcp_datagram.flags & FIN == FIN:
-                    # respond and close
+                # If FIN is received, acknowledge and close the connection
+                elif tcp_datagram.flags & FIN == FIN:
+                    # Acknowledge the received FIN packet
+                    self._ack_seq += 1
+                    self._send_one(flags=ACK, data="")
+
+                    # Close the connection and break out of the loop
+                    connection_closed = True
+                    break
             
+            # If current self._seq is not expected_largest_ack_seq
+            # There must be a packet drop 
             if self._seq != expected_largest_ack_seq:
-                self.update_congestion_control(slow_flag = True)
+                self.update_congestion_control(slow_flag=True)
+            else:
+                self.update_congestion_control(slow_flag=False)
+
 
 
     def update_congestion_control(self, slow_flag):
