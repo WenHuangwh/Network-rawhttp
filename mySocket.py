@@ -226,9 +226,8 @@ class RawSocket:
     def _receive_one(self, size=20480, timeout=60):
         cur_time = time.time()
         received_pkt = self.recv_socket.recv(size)
-        # print(received_pkt.hex())
         if len(received_pkt) == 0:
-            continue
+            return None
         if self.check_incomingPKT(received_pkt):
             ip_datagram = self.unpack_ip_packet(received_pkt)
             tcp_datagram = self.unpack_tcp_packet(received_pkt)
