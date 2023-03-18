@@ -237,7 +237,7 @@ class RawSocket:
         except socket.timeout:
             return None
 
-    def receive_all(self, timeout = 60):
+    def receive_all(self):
         start_time = time.time()
         buffer = None
         start_seq = self._ack_seq
