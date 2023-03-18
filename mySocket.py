@@ -383,7 +383,7 @@ class RawSocket:
         print("Receive time expired")
         return False
 
-    def close(self, timeout=60):
+    def close(self, timeout=5):
         # Send FIN packet to the server
         self._send_one(FIN, "")
 
