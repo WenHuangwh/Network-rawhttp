@@ -313,8 +313,7 @@ class RawSocket:
 
         # Send ACK respond to FIN
         self._ack_seq += 1
-        self._send_one(ACK, "")
-        self._send_one(FIN, "")
+        self._send_one(FIN_ACK, "")
 
         return buffer
 
@@ -371,12 +370,15 @@ class RawSocket:
         start_time = time.time()
         receive_ACK = False
 
+        print('Start to close')
         while time.time() - start_time <= timeout:
+            
             tcp_datagram = self._receive_one()
             if tcp_datagram is None:
+                print('Get None')
                 continue
 
-            if tcp_datagram.flags & ACK != 0:
+            if tcp_datagram.flags & ACK:
                 # Server acknowledged the FIN_ACK, break the loop
                 print("Receive ACK in graceful close")
                 receive_ACK = True
