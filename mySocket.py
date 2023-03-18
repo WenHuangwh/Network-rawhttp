@@ -177,7 +177,6 @@ class RawSocket:
             if self._seq != expected_largest_ack_seq:
                 self.update_congestion_control(slow_flag = True)
 
-        self._send_one(flags=FIN_PSH_ACK, data="")
 
 
 
