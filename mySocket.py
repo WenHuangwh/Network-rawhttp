@@ -146,7 +146,7 @@ class RawSocket:
             buffer_key += len(data)
         
         # Keep sending data until the buffer is empty
-        while self._seq in buffer:
+        while self._seq < buffer_key:
             window_size = min(self.cwnd, adwnd // self.mss)
             
             # Send packets within the window size
