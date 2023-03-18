@@ -4,9 +4,9 @@ from urllib.parse import urlparse
 from struct import *
 from random import randint
 import time
-from collections import namedtuple, deque
-from priorityQueue import PriorityQueue
+from collections import namedtuple
 from functools import reduce
+import array
 
 
 SYN = 0x02   # 0b00000010
@@ -411,6 +411,18 @@ class RawSocket:
 
 
     def calculate_checksum(self, packet):
+        """
+        Calculate the checksum of a packet in bytes. Referenced from
+        https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
+        Parameters
+        ----------
+        packet: bytes
+            Raw bytes of a packet
+        Returns
+        -------
+        int
+            Checksum of the packet
+        """
         if len(packet) % 2 != 0:
             packet += b'\0'
 
@@ -419,6 +431,7 @@ class RawSocket:
         res += res >> 16
 
         return (~res) & 0xffff
+
 
     def verify_tcp_checksum(self, packet):
         tcp_packet = packet[20:]
