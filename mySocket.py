@@ -437,10 +437,7 @@ class RawSocket:
     #     tcp_packet = packet[20:]
     #     source_address = socket.inet_aton(self._destIpAddr)
     #     dest_address = socket.inet_aton(self._srcIpAddr)
-    #     pseudo_header = pack('!4s4sBBH',
-    #                          source_address, dest_address,
-    #                          0, socket.IPPROTO_TCP,
-    #                          len(tcp_packet))
+    #     pseudo_header = pack('!4s4sBBH',source_address, dest_address, 0, socket.IPPROTO_TCP, len(tcp_packet))
 
     #     return self.calculate_checksum(pseudo_header + tcp_packet) == 0
 
@@ -487,7 +484,7 @@ class RawSocket:
         print(f"Original TCP checksum: {original_checksum}")
         print(f"Calculated TCP checksum: {calculated_checksum}")
         if not is_valid:
-            print(bytes_packet.hex())
+            print(bytes_packet)
         return is_valid
 
     
