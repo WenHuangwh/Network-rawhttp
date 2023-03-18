@@ -384,7 +384,7 @@ class RawSocket:
 
     def verify_tcp_checksum(self, bytes_packet):
         ip_header_bytes = bytes_packet[:20]
-        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        ip_header = struct.unpack('!BBHHHBBH4s4s', ip_header_bytes)
         protocol = ip_header[6]
 
         if protocol != 6:
@@ -399,7 +399,7 @@ class RawSocket:
         src_ip, dst_ip = ip_header[8], ip_header[9]
         tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
-        pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
+        pseudo_header = src_ip + dst_ip + struct.pack('!BBH', 0, protocol, tcp_length)
 
         def calculate_checksum(data):
             checksum = 0
@@ -417,15 +417,12 @@ class RawSocket:
             tcp_data += b'\x00'
 
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        print("Test the new calculation method, TCP checksum: ", self.checksum(checksum_data))
-
         calculated_checksum = calculate_checksum(checksum_data)
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)
         print(f"Original TCP checksum: {original_checksum}")
         print(f"Calculated TCP checksum: {calculated_checksum}")
-
         return is_valid
 
     def verify_ipv4_checksum(self, byte_packet):
@@ -447,16 +444,14 @@ class RawSocket:
 
         original_checksum = int.from_bytes(header[10:12], byteorder='big')
         header = header[:10] + b'\x00\x00' + header[12:]
-        print("Test the new calculation method, IP checksum: ", self.checksum(header))
-
         values = unpack('!HHHHHHHHHH', header)
         checksum = sum(values)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         calculated_checksum = ~checksum & 0xFFFF
-        
-        print(f"Original IP checksum: {original_checksum}")
-        print(f"Calculated IP checksum: {calculated_checksum}")
 
         return original_checksum == calculated_checksum
-        
+
+    
+
+
