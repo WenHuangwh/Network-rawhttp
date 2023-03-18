@@ -242,8 +242,7 @@ class RawSocket:
         buffer = None
         start_seq = self._ack_seq
 
-        while time.time() - start_time <= timeout and buffer == None:
-            buffer = self._receive_all()
+        buffer = self._receive_all()
 
         received_data = []
 
@@ -285,7 +284,6 @@ class RawSocket:
             else:
                 timeout_counter = 0
                 
-
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
