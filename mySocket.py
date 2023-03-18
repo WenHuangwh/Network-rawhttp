@@ -313,6 +313,7 @@ class RawSocket:
 
         # Send ACK respond to FIN
         self._ack_seq += 1
+        self._send_one(ACK, "")
         self._send_one(FIN_ACK, "")
 
         return buffer
