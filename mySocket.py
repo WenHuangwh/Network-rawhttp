@@ -429,9 +429,7 @@ class RawSocket:
                              0, socket.IPPROTO_TCP,
                              len(tcp_packet))
 
-        return calculate_checksum(pseudo_header + tcp_packet) == 0
-
-        return is_valid
+        return self.calculate_checksum(pseudo_header + tcp_packet) == 0
 
     
 
