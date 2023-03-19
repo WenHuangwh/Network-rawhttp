@@ -353,8 +353,8 @@ class RawSocket:
             return False
 
         # Verify the TCP checksum of the received packet
-        # if not self.verify_tcp_checksum(packet):
-        #     return False
+        if not self.verify_tcp_checksum(packet):
+            return False
 
         # All checks passed, return True
         return True
