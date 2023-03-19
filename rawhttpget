@@ -16,6 +16,9 @@ def getMyIpAddr(dest_ip_addr, dest_port):
     s.close()
     return my_ip_addr
 
+def generate_get_req(parsed_url):
+    return f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Close\r\n\r\n"
+
 
 def main():
 
@@ -47,13 +50,13 @@ def main():
         print("connection failed")
         sys.exit(1)
 
-    request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Close\r\n\r\n"
+    request = generate_get_req(parsed_url)
 
     rawSocket.send(request)
     header, body = rawSocket.receive_all()
 
     if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
-        print("This is not HTTP 200, file error")
+        print("File error")
         return
 
     # Save the payload to a .log file
