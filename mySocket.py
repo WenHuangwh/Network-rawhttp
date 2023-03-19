@@ -847,7 +847,7 @@ class RawSocket:
             tcp_data += b'\x00'
 
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = self.calculate_checksum(checksum_data)
+        calculated_checksum = self.checksum(checksum_data)
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)
