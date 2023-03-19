@@ -765,8 +765,9 @@ class RawSocket:
             else:
                 word = (data[i] << 8)
             checksum += word
-        checksum = (checksum >> 16) + (checksum & 0xFFFF)
-        checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        checksum = ~checksum & 0xFFFF
         return checksum
 
     def verify_ipv4_checksum(self, byte_packet):
