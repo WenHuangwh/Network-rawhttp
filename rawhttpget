@@ -47,7 +47,7 @@ def main():
         print("connection failed")
         sys.exit(1)
 
-    request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: keep-alive\r\n\r\n"
+    request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Keep-Alive\r\n\r\n"
 
     rawSocket.send(request)
     header, body = rawSocket.receive_all()
