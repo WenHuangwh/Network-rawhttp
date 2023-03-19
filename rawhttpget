@@ -9,7 +9,22 @@ from collections import namedtuple
 from mySocket import RawSocket
 
 
-def getMyIpAddr(dest_ip_addr, dest_port):
+def get_my_ip(dest_ip_addr, dest_port):
+    """
+    Get the local IP address used to connect to the specified destination IP and port.
+
+    Parameters
+    ----------
+    dest_ip_addr : str
+        The destination IP address.
+    dest_port : int
+        The destination port.
+
+    Returns
+    -------
+    str
+        The local IP address used to connect to the specified destination.
+    """
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect((dest_ip_addr, dest_port))
     my_ip_addr = s.getsockname()[0]
@@ -17,28 +32,42 @@ def getMyIpAddr(dest_ip_addr, dest_port):
     return my_ip_addr
 
 def generate_get_req(parsed_url):
+    """
+    Generate an HTTP GET request based on the given parsed URL.
+
+    Parameters
+    ----------
+    parsed_url : ParseResult
+        The parsed URL object.
+
+    Returns
+    -------
+    str
+        The generated HTTP GET request.
+    """
     return f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Close\r\n\r\n"
 
-
 def main():
-
+    """
+    Main function that fetches a file from a given URL using a custom raw HTTP GET request.
+    """
     start_time = time.time()
     print("Welcome to rawhttpget program")
     url = sys.argv[1]
 
     # Split URL into host and path components
     parsed_url = urlparse(url)
-    filename = parsed_url.path.split("/")[-1]  # Corrected line
+    filename = parsed_url.path.split("/")[-1]
     if not filename:
-        filename = "index.html"  # Corrected line
+        filename = "index.html"
 
     dest_hostname = parsed_url.hostname
     dest_ip_addr = socket.gethostbyname(dest_hostname)
     src_port = randint(49152, 65535)
     dest_port = 80
-    src_ip_addr = getMyIpAddr(dest_ip_addr, dest_port)
+    src_ip_addr = get_my_ip(dest_ip_addr, dest_port)
 
-    # handshake
+    # Handshake
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     
     connection = False
@@ -59,7 +88,7 @@ def main():
         print("File error")
         return
 
-    # Save the payload to a .log file
+    # Save the payload to a file
     with open(filename, "wb") as log_file:
         log_file.write(body)
 

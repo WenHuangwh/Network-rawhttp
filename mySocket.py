@@ -74,46 +74,46 @@ class RawSocket:
         print('Dest IP and port:', self._destIpAddr, self._destPort)
 
     
-    # def checksum(self, msg):
-    #     """
-    #     Calculate the checksum of the given message.
+    def checksum(self, msg):
+        """
+        Calculate the checksum of the given message.
 
-    #     The function takes a byte message, iterates over it in pairs of bytes, and computes the checksum using the
-    #     Internet checksum algorithm. The computed checksum is returned as a 16-bit integer.
+        The function takes a byte message, iterates over it in pairs of bytes, and computes the checksum using the
+        Internet checksum algorithm. The computed checksum is returned as a 16-bit integer.
 
-    #     Parameters
-    #     ----------
-    #     msg : bytes
-    #         The byte message for which the checksum needs to be calculated.
+        Parameters
+        ----------
+        msg : bytes
+            The byte message for which the checksum needs to be calculated.
 
-    #     Returns
-    #     -------
-    #     int
-    #         The calculated checksum as a 16-bit integer.
+        Returns
+        -------
+        int
+            The calculated checksum as a 16-bit integer.
 
-    #     Local Variables
-    #     ---------------
-    #     s : int
-    #         The accumulator for the checksum calculation.
-    #     w : int
-    #         A 16-bit word obtained by combining two consecutive bytes in the message.
-    #     """
+        Local Variables
+        ---------------
+        s : int
+            The accumulator for the checksum calculation.
+        w : int
+            A 16-bit word obtained by combining two consecutive bytes in the message.
+        """
 
-    #     s = 0  # Initialize the accumulator
+        s = 0  # Initialize the accumulator
 
-    #     # Loop through the message, taking 2 characters (bytes) at a time
-    #     for i in range(0, len(msg), 2):
-    #         w = (msg[i]) + ((msg[i + 1]) << 8)  # Combine two consecutive bytes into a 16-bit word
-    #         s = s + w  # Add the 16-bit word to the accumulator
+        # Loop through the message, taking 2 characters (bytes) at a time
+        for i in range(0, len(msg), 2):
+            w = (msg[i]) + ((msg[i + 1]) << 8)  # Combine two consecutive bytes into a 16-bit word
+            s = s + w  # Add the 16-bit word to the accumulator
 
-    #     # Handle carry-over by adding the most significant 16 bits to the least significant 16 bits
-    #     s = (s >> 16) + (s & 0xffff)
-    #     s = s + (s >> 16)
+        # Handle carry-over by adding the most significant 16 bits to the least significant 16 bits
+        s = (s >> 16) + (s & 0xffff)
+        s = s + (s >> 16)
 
-    #     # Calculate the one's complement and mask the result to a 4-byte short (16 bits)
-    #     s = ~s & 0xffff
+        # Calculate the one's complement and mask the result to a 4-byte short (16 bits)
+        s = ~s & 0xffff
 
-    #     return s  # Return the calculated checksum
+        return s  # Return the calculated checksum
 
     
     def ip_header(self):
@@ -640,146 +640,21 @@ class RawSocket:
         self._recv_socket.close()
 
 
-    # def verify_ipv4_checksum(self, byte_packet):
-    #     """
-    #     Verify the IPv4 header checksum.
-
-    #     Parameters
-    #     ----------
-    #     byte_packet : bytes
-    #         The raw IP packet bytes
-
-    #     Returns
-    #     -------
-    #     bool
-    #         True if the checksum is valid, False otherwise
-    #     """
-    #     # Validate the IPv4 header and calculate the checksum
-    #     header = byte_packet[:20]
-
-    #     if len(header) < 20:
-    #         print("Invalid IPv4 header length")
-    #         return False
-
-    #     version = header[0] >> 4
-    #     if version != 4:
-    #         print("Invalid IP version")
-    #         return False
-
-    #     ihl = header[0] & 0x0F
-    #     if ihl < 5:
-    #         print("Invalid IPv4 header length field")
-    #         return False
-
-    #     original_checksum = int.from_bytes(header[10:12], byteorder='big')
-    #     header = header[:10] + b'\x00\x00' + header[12:]
-    #     values = unpack('!HHHHHHHHHH', header)
-    #     checksum = sum(values)
-    #     checksum = (checksum & 0xFFFF) + (checksum >> 16)
-    #     checksum = (checksum & 0xFFFF) + (checksum >> 16)
-    #     calculated_checksum = ~checksum & 0xFFFF
-
-    #     # Return the result of the checksum validation
-    #     return original_checksum == calculated_checksum
-
-
-    # def verify_tcp_checksum(self, bytes_packet):
-    #     """
-    #     Verify the TCP header checksum.
-
-    #     Parameters
-    #     ----------
-    #     bytes_packet : bytes
-    #         The raw TCP packet bytes
-
-    #     Returns
-    #     -------
-    #     bool
-    #         True if the checksum is valid, False otherwise
-    #     """
-    #     # Validate the TCP packet and calculate the checksum
-    #     ip_header_bytes = bytes_packet[:20]
-    #     ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
-    #     protocol = ip_header[6]
-
-    #     if protocol != 6:
-    #         print("Not a TCP packet.")
-    #         return False
-
-    #     ip_header_length = (ip_header[0] & 0x0F) * 4
-    #     tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
-    #     tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
-    #     tcp_data = bytes_packet[ip_header_length + tcp_header_length:]
-
-    #     src_ip, dst_ip = ip_header[8], ip_header[9]
-    #     tcp_length = len(tcp_header_bytes) + len(tcp_data)
-
-    #     pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
-
-    #     def calculate_checksum(data):
-    #         checksum = 0
-    #         for i in range(0, len(data), 2):
-    #             if i + 1 < len(data):
-    #                 word = (data[i] << 8) + data[i + 1]
-    #             else:
-    #                 word = (data[i] << 8)
-    #             checksum += word
-    #         checksum = (checksum >> 16) + (checksum & 0xFFFF)
-    #         checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
-    #         return checksum
-
-    #     if len(tcp_data) % 2 != 0:
-    #         tcp_data += b'\x00'
-
-    #     checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-    #     calculated_checksum = calculate_checksum(checksum_data)
-
-    #     original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
-    #     is_valid = (calculated_checksum == original_checksum)
-
-    #     # Return the result of the checksum validation
-    #     return is_valid
-
-    
-    def checksum(self, packet):
-        """
-        Calculate the checksum of a packet in bytes. Referenced from
-        https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
-        Parameters
-        ----------
-        packet: bytes
-            Raw bytes of a packet
-        Returns
-        -------
-        int
-            Checksum of the packet
-        """
-        if len(packet) % 2 != 0:
-            packet += b'\0'
-
-        res = sum(array.array("H", packet))
-        res = (res >> 16) + (res & 0xffff)
-        res += res >> 16
-
-        return (~res) & 0xffff
-
     def verify_ipv4_checksum(self, byte_packet):
         """
         Verify the IPv4 header checksum.
 
-        This function takes a raw IP packet bytes as input and validates the IPv4 header checksum. It returns True if the
-        checksum is valid, and False otherwise.
-
         Parameters
         ----------
         byte_packet : bytes
-            The raw IP packet bytes.
+            The raw IP packet bytes
 
         Returns
         -------
         bool
-            True if the checksum is valid, False otherwise.
+            True if the checksum is valid, False otherwise
         """
+        # Validate the IPv4 header and calculate the checksum
         header = byte_packet[:20]
 
         if len(header) < 20:
@@ -798,27 +673,31 @@ class RawSocket:
 
         original_checksum = int.from_bytes(header[10:12], byteorder='big')
         header = header[:10] + b'\x00\x00' + header[12:]
-        calculated_checksum = self.checksum(header)
+        values = unpack('!HHHHHHHHHH', header)
+        checksum = sum(values)
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        checksum = (checksum & 0xFFFF) + (checksum >> 16)
+        calculated_checksum = ~checksum & 0xFFFF
 
+        # Return the result of the checksum validation
         return original_checksum == calculated_checksum
+
 
     def verify_tcp_checksum(self, bytes_packet):
         """
         Verify the TCP header checksum.
 
-        This function takes a raw TCP packet bytes as input and validates the TCP header checksum. It returns True if the
-        checksum is valid, and False otherwise.
-
         Parameters
         ----------
         bytes_packet : bytes
-            The raw TCP packet bytes.
+            The raw TCP packet bytes
 
         Returns
         -------
         bool
-            True if the checksum is valid, False otherwise.
+            True if the checksum is valid, False otherwise
         """
+        # Validate the TCP packet and calculate the checksum
         ip_header_bytes = bytes_packet[:20]
         ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
         protocol = ip_header[6]
@@ -836,14 +715,30 @@ class RawSocket:
         tcp_length = len(tcp_header_bytes) + len(tcp_data)
 
         pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
-        
+
+        def calculate_checksum(data):
+            checksum = 0
+            for i in range(0, len(data), 2):
+                if i + 1 < len(data):
+                    word = (data[i] << 8) + data[i + 1]
+                else:
+                    word = (data[i] << 8)
+                checksum += word
+            checksum = (checksum >> 16) + (checksum & 0xFFFF)
+            checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
+            return checksum
+
         if len(tcp_data) % 2 != 0:
             tcp_data += b'\x00'
 
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = self.checksum(checksum_data)
+        calculated_checksum = calculate_checksum(checksum_data)
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)
 
+        # Return the result of the checksum validation
         return is_valid
+
+
+
