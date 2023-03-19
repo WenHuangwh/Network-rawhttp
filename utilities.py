@@ -197,7 +197,7 @@ class TCPPacket:
     # ... (previous code)
 
     @staticmethod
-    
+
     def calculate_checksum(self, packet):
         if len(packet) % 2 != 0:
             packet += b'\0'
@@ -244,3 +244,39 @@ class TCPPacket:
 packet = TCPPacket(raw_bytes=b'...')  # Your raw packet bytes
 is_valid = packet.validate_tcp_checksum()
 print(is_valid)
+
+
+
+
+
+
+    # def calculate_checksum(self, packet):
+    #     """
+    #     Calculate the checksum of a packet in bytes. Referenced from
+    #     https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
+    #     Parameters
+    #     ----------
+    #     packet: bytes
+    #         Raw bytes of a packet
+    #     Returns
+    #     -------
+    #     int
+    #         Checksum of the packet
+    #     """
+    #     if len(packet) % 2 != 0:
+    #         packet += b'\0'
+
+    #     res = sum(array.array("H", packet))
+    #     res = (res >> 16) + (res & 0xffff)
+    #     res += res >> 16
+
+    #     return (~res) & 0xffff
+
+
+    # def verify_tcp_checksum(self, packet):
+    #     tcp_packet = packet[20:]
+    #     source_address = socket.inet_aton(self._destIpAddr)
+    #     dest_address = socket.inet_aton(self._srcIpAddr)
+    #     pseudo_header = pack('!4s4sBBH',source_address, dest_address, 0, socket.IPPROTO_TCP, len(tcp_packet))
+
+    #     return self.calculate_checksum(pseudo_header + tcp_packet) == 0
