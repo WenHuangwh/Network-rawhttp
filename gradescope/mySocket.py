@@ -441,6 +441,20 @@ class RawSocket:
 
         
     def _receive_all(self, buffer_limit = 65535):
+        """
+        Receive all incoming packets and store them in a buffer.
+
+        Parameters
+        ----------
+        buffer_limit : int, optional
+            The maximum buffer size, by default 65535
+
+        Returns
+        -------
+        dict
+            A dictionary containing the received data segments with their sequence numbers as keys
+        """
+        # Initialize the buffer, buffer_size, start_seq, and data_is_complete_seq
         buffer = {}
         buffer_size = 0
 
@@ -451,11 +465,12 @@ class RawSocket:
         # Initialize the duplicate ACK counter and timeout counter
         dup_ack_counter = 0
         timeout_counter = 0
-        max_timeouts = 1000
+        max_timeouts = 3
         max_dup = 3
 
         receive_FIN = False
 
+        # Main loop to receive and process incoming packets
         while not receive_FIN or data_is_complete_seq != self._ack_seq:
 
             tcp_datagram = self._receive_one()
@@ -510,16 +525,31 @@ class RawSocket:
                 self._rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
 
-        # Send ACK respond to FIN
+        # Finalize the connection by sending ACK and FIN_ACK packets
         self._ack_seq += 1
         self._send_one(ACK, "")
         self._send_one(FIN_ACK, "")
         self._receive_one()
-
+        # Return the buffer containing received data segments
         return buffer
 
     def unpack_ip_packet(self, packet):
+        """
+        Unpack an IP packet and extract the header information.
+
+        Parameters
+        ----------
+        packet : bytes
+            The raw IP packet bytes
+
+        Returns
+        -------
+        namedtuple
+            A named tuple containing the IP header fields
+        """
+        # Unpack the IP header and extract relevant fields
         IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
+
         ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
         version = ip_header[0] >> 4
         header_length = (ip_header[0] & 0xF) * 4
@@ -527,10 +557,27 @@ class RawSocket:
         protocol = ip_header[6]
         src_address = socket.inet_ntoa(ip_header[8])
         dest_address = socket.inet_ntoa(ip_header[9])
+
+        # Return the IP header as a namedtuple
         return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
 
     def unpack_tcp_packet(self, packet):
+        """
+        Unpack a TCP packet and extract the header information.
+
+        Parameters
+        ----------
+        packet : bytes
+            The raw TCP packet bytes
+
+        Returns
+        -------
+        namedtuple
+            A named tuple containing the TCP header fields
+        """
+        # Unpack the TCP header and extract relevant fields
         TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
+
         tcp_header = unpack('!HHLLBBHHH', packet[20:40])
         src_port = tcp_header[0]
         dest_port = tcp_header[1]
@@ -543,9 +590,20 @@ class RawSocket:
         urgent_pointer = tcp_header[8]
         payload = packet[20 + header_length:]
         adwind = socket.ntohs(tcp_header[6])
+
+        # Return the TCP header as a namedtuple
         return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload, adwind)
 
     def handshake(self):
+        """
+        Perform the TCP handshake with the server.
+
+        Returns
+        -------
+        bool
+            True if the handshake is successful, False otherwise
+        """
+        # Perform the 3-way handshake
         # send self.seq = 0
         self._send_one(SYN, "")
         # self.seq += 1
@@ -559,9 +617,13 @@ class RawSocket:
             print("Connected")
             return True
         print("Connect failed")
+        # Return the result of the handshake
         return False
 
     def close(self):
+        """
+        Close the connection with the server by sending a FIN packet and waiting for the FIN_ACK response.
+        """
         # Send FIN packet to the server
         self._send_one(FIN, "")
 
@@ -572,12 +634,27 @@ class RawSocket:
         if tcp_datagram != None and tcp_datagram.flags & FIN_ACK:
             # Server acknowledged the FIN_ACK, break the loop
             self._send_one(ACK, "")
-            
+
+        # Close the send and receive sockets    
         self._send_socket.close()
         self._recv_socket.close()
 
 
     def verify_ipv4_checksum(self, byte_packet):
+        """
+        Verify the IPv4 header checksum.
+
+        Parameters
+        ----------
+        byte_packet : bytes
+            The raw IP packet bytes
+
+        Returns
+        -------
+        bool
+            True if the checksum is valid, False otherwise
+        """
+        # Validate the IPv4 header and calculate the checksum
         header = byte_packet[:20]
 
         if len(header) < 20:
@@ -602,10 +679,25 @@ class RawSocket:
         checksum = (checksum & 0xFFFF) + (checksum >> 16)
         calculated_checksum = ~checksum & 0xFFFF
 
+        # Return the result of the checksum validation
         return original_checksum == calculated_checksum
 
 
     def verify_tcp_checksum(self, bytes_packet):
+        """
+        Verify the TCP header checksum.
+
+        Parameters
+        ----------
+        bytes_packet : bytes
+            The raw TCP packet bytes
+
+        Returns
+        -------
+        bool
+            True if the checksum is valid, False otherwise
+        """
+        # Validate the TCP packet and calculate the checksum
         ip_header_bytes = bytes_packet[:20]
         ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
         protocol = ip_header[6]
@@ -644,15 +736,9 @@ class RawSocket:
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)
-        # print(f"Original TCP checksum: {original_checksum}")
-        # print(f"Calculated TCP checksum: {calculated_checksum}")
-        if not is_valid:
-            print("Incorrect TCP checksum")
-            print(f"Original TCP checksum: {original_checksum}")
-            print(f"Calculated TCP checksum: {calculated_checksum}")
-            # print(bytes_packet)
+
+        # Return the result of the checksum validation
         return is_valid
 
-    
 
 

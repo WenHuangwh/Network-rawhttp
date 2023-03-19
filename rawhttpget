@@ -6,7 +6,7 @@ from struct import *
 from random import randint
 import time
 from collections import namedtuple
-from mySocket import RawSocket
+from rawSocket import RawSocket
 
 
 def get_my_ip(dest_ip_addr, dest_port):
