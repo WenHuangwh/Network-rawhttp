@@ -8,14 +8,7 @@ import time
 from collections import namedtuple
 from mySocket import RawSocket
 
-SYN = 0x02   # 0b00000010
-ACK = 0x10   # 0b00010000
-SYN_ACK = 0x12   # 0b00010010
-FIN = 0x01   # 0b00000001
-FIN_ACK = 0x11   # 0b00010001
-PSH_ACK = 0x18   # 0b00011000
 
-# Success built connection
 def getMyIpAddr(dest_ip_addr, dest_port):
     s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     s.connect((dest_ip_addr, dest_port))
@@ -23,20 +16,6 @@ def getMyIpAddr(dest_ip_addr, dest_port):
     s.close()
     return my_ip_addr
 
-def tearDown(rawSocket, timeout=60):
-    rawSocket._send_one(FIN, "")
-    tcp_datagram = rawSocket.receive()
-    print("3:")
-    print(tcp_datagram)
-    if tcp_datagram != None and tcp_datagram.flags == ACK:
-        rawSocket._send_one(ACK, "")
-        tcp_datagram = rawSocket.receive()
-        print("4:")
-        print(tcp_datagram)
-        print("Connected")
-        return True
-    else:
-        return False
 
 def main():
 
@@ -58,10 +37,14 @@ def main():
 
     # handshake
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
+    
+    connection = False
 
-    connection = rawSocket.handshake()
+    while not connection and time.time() - start_time < 60:
+        connection = rawSocket.handshake()
 
     if not connection:
+        print("connection failed")
         sys.exit(1)
 
     request = f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n\r\n"

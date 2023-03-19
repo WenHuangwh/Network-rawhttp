@@ -13,20 +13,34 @@ SYN = 0x02   # 0b00000010
 ACK = 0x10   # 0b00010000
 SYN_ACK = 0x12   # 0b00010010
 FIN = 0x01   # 0b00000001
-FIN_ACK = 0x11   # 0b00010001
 PSH_ACK = 0x18   # 0b00011000
 FIN_PSH_ACK = 0x19 # 0b00011001
 
 class RawSocket:
 
     def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port):
+        """
+        Initializes an instance of the custom TCP class.
+
+        Parameters
+        ----------
+        src_ipAddr : str
+            Source IP address
+        dest_ipAddr : str
+            Destination IP address
+        src_port : int
+            Source port number
+        dest_port : int
+            Destination port number
+        """
         try:
             # Creates two raw sockets for sending and receiving packets.
             self._send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
             self._recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
             self._srcIpAddr = src_ipAddr
             self._destIpAddr = dest_ipAddr
-            # Choosing a random port number within the dynamic allocation range 
+
+            # Set the source and destination port numbers
             self._srcPort = src_port
             self._destPort = dest_port
             
@@ -35,23 +49,29 @@ class RawSocket:
             
             # Sets the initial TCP acknowledgement sequence number to 0.
             self._ack_seq = 0
-            self._ip_id = 1    
+            self._ip_id = 1
+
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
             self._maxcwnd = 1000
             self._cwnd = 1
             self._rwnd = 65535
+
             # Sets the initial TCP advertised window size to 20480 bytes.
-            self._adwind = socket.htons (self._rwnd)
-            # This is ipv4 so Maximum Segment Size is 1460 bytes.
+            self._adwind = socket.htons(self._rwnd)
+
+            # This is ipv4, so the Maximum Segment Size is 1460 bytes.
             # Must be an even number
             self._mss = 1460
         except socket.error as e:
+            # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
             sys.exit(1)
     
+        # Prints IP and port number for debugging purposes.
         print('src IP and port:', self._srcIpAddr, self._srcPort)
         print('Dest IP and port:', self._destIpAddr, self._destPort)
+
     
     def checksum(self, msg):
         """
@@ -96,85 +116,147 @@ class RawSocket:
 
     
     def ip_header(self):
+        """
+        Creates an IP header for the custom TCP implementation.
+
+        Returns
+        -------
+        ip_header : bytes
+            Packed IP header in network byte order
+        """
         # IP header fields
-        ip_ihl = 5
-        ip_ver = 4
-        ip_tos = 0
-        ip_tot_len = 0
-        ip_id = self._ip_id
+        ip_ihl = 5        # IP header length (IHL) in 32-bit words
+        ip_ver = 4        # IP version (4 for IPv4)
+        ip_tos = 0        # Type of service (0 for default)
+        ip_tot_len = 0    # Total length of the IP packet (0 for auto-calculation)
+        ip_id = self._ip_id  # IP identification (unique ID for each packet)
         self._ip_id += 1
         self._ip_id %= 65536
-        ip_frag_off = 0
-        ip_ttl = 255
-        ip_proto = socket.IPPROTO_TCP
-        ip_check = 0
-        ip_saddr = socket.inet_aton(self._srcIpAddr)
-        ip_daddr = socket.inet_aton(self._destIpAddr)
-        ip_ihl_ver = (ip_ver << 4) + ip_ihl
-        # print(f"{ip_ihl_ver}, {ip_tos}, {ip_tot_len}, {ip_id}, {ip_frag_off}, {ip_ttl}, {ip_proto}, {ip_check}, {ip_saddr}, {ip_daddr}")
+        ip_frag_off = 0   # Fragment offset (0 for not fragmented)
+        ip_ttl = 255      # Time to live (TTL)
+        ip_proto = socket.IPPROTO_TCP  # Protocol (TCP)
+        ip_check = 0      # Checksum (0 for auto-calculation)
+        ip_saddr = socket.inet_aton(self._srcIpAddr)  # Source IP address
+        ip_daddr = socket.inet_aton(self._destIpAddr)  # Destination IP address
+        ip_ihl_ver = (ip_ver << 4) + ip_ihl  # Combined IP version and header length
+
+        # Pack IP header fields into a bytes object in network byte order
         ip_header = pack('!BBHHHBBH4s4s', ip_ihl_ver, ip_tos, ip_tot_len, ip_id, ip_frag_off, ip_ttl, ip_proto, ip_check, ip_saddr, ip_daddr)
+
         return ip_header
+
             
     def tcp_header(self, flags, user_data):
-        # tcp header fields
-        tcp_src = self._srcPort
-        tcp_dest = self._destPort
-        tcp_seq = self._seq
-        tcp_ack_seq = self._ack_seq
-        tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
-        #tcp flags
-        tcp_window = self._adwind	#	maximum allowed window size
-        tcp_check = 0
-        tcp_urg_ptr = 0
+        """
+        Creates a TCP header for the custom TCP implementation.
 
-        tcp_offset_res = (tcp_doff << 4) + 0
-        tcp_flags = flags
+        Parameters
+        ----------
+        flags : int
+            TCP flags (e.g., SYN, ACK, FIN) to be set in the header
+        user_data : bytes
+            Payload data to be sent with the TCP segment
 
-        # the ! in the pack format string means network order
-        tcp_header = pack('!HHLLBBHHH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window, tcp_check, tcp_urg_ptr)
+        Returns
+        -------
+        tcp_header : bytes
+            Packed TCP header in network byte order
+        """
+        # TCP header fields
+        tcp_src = self._srcPort      # Source port
+        tcp_dest = self._destPort    # Destination port
+        tcp_seq = self._seq          # Sequence number
+        tcp_ack_seq = self._ack_seq  # Acknowledgment sequence number
+        tcp_doff = 5    # Data offset - 4-bit field, size of TCP header in 32-bit words, 5 * 4 = 20 bytes
+        tcp_flags = flags  # TCP flags
+        tcp_window = self._adwind  # Maximum allowed window size
+        tcp_check = 0      # Checksum (to be calculated later)
+        tcp_urg_ptr = 0    # Urgent pointer (not used)
 
-        # pseudo header fields
-        src_address = socket.inet_aton( self._srcIpAddr )
+        tcp_offset_res = (tcp_doff << 4) + 0  # Combined data offset and reserved bits
+
+        # Pack initial TCP header fields into a bytes object in network byte order
+        tcp_header = pack('!HHLLBBHHH', tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags, tcp_window, tcp_check, tcp_urg_ptr)
+
+        # Pseudo header fields
+        src_address = socket.inet_aton(self._srcIpAddr)
         dest_address = socket.inet_aton(self._destIpAddr)
         placeholder = 0
         protocol = socket.IPPROTO_TCP
         tcp_length = len(tcp_header) + len(user_data)
 
-        psh = pack('!4s4sBBH' , src_address , dest_address , placeholder , protocol , tcp_length)
+        # Create the pseudo header
+        psh = pack('!4s4sBBH', src_address, dest_address, placeholder, protocol, tcp_length)
         psh = psh + tcp_header + user_data
 
+        # Calculate the correct checksum
         tcp_check = self.checksum(psh)
 
-        # make the tcp header again and fill the correct checksum - remember checksum is NOT in network byte order
-        tcp_header = pack('!HHLLBBH' , tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags,  tcp_window) + pack('H' , tcp_check) + pack('!H' , tcp_urg_ptr)
+        # Repack the TCP header with the correct checksum (not in network byte order)
+        tcp_header = pack('!HHLLBBH', tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags, tcp_window) + pack('H', tcp_check) + pack('!H', tcp_urg_ptr)
+
         return tcp_header
 
+
     def _send_one(self, flags, data=""):
+        """
+        Sends a single TCP segment with the specified flags and data.
+
+        Parameters
+        ----------
+        flags : int
+            TCP flags (e.g., SYN, ACK, FIN) to be set in the header
+        data : str, optional
+            Payload data to be sent with the TCP segment (default is an empty string)
+
+        """
+        # Encode the payload data as bytes
         data = data.encode()
+
+        # Create the IP header
         ip_header = self.ip_header()
+
+        # Create the TCP header with the specified flags and data
         tcp_header = self.tcp_header(flags, data)
+
+        # Combine the IP header, TCP header, and data into a single packet
         packet = ip_header + tcp_header + data
+
+        # Send the packet using the raw send socket
         self._send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
 
     def send(self, data):
+        """
+        Sends the given data using the TCP protocol.
+
+        Parameters
+        ----------
+        data : str
+            The data to be sent
+        """
+        # Initialize the advertised window size
         adwnd = 65535
+
+        # Split the data into segments based on the Maximum Segment Size (MSS)
         segments = [data[i:i+self._mss] for i in range(0, len(data), self._mss)]
+
+        # Initialize the buffer for storing the data segments and their sequence numbers
         buffer = {}
-        # Use sequence number as key for buffer
         buffer_key = self._seq
 
-        # Create a buffer of the data segments with their sequence numbers
+        # Fill the buffer with data segments and their sequence numbers
         for data in segments:
             if len(data) % 2 == 1:
                 data += " "
             buffer[buffer_key] = data
             buffer_key += len(data)
-        
+
         # Keep sending data until the buffer is empty
         while self._seq < buffer_key:
+            # Calculate the window size based on the congestion window and advertised window
             window_size = min(self._cwnd, adwnd // self._mss)
-            
+
             # Send packets within the window size
             for i in range(window_size):
                 if self._seq not in buffer:
@@ -188,88 +270,174 @@ class RawSocket:
             slow_flag = False
             cur_ack_seq = -1
             for i in range(window_size):
+                # Receive a TCP datagram and check its flags
                 tcp_datagram = self._receive_one(timeout=5)
 
                 if not tcp_datagram:
+                    # If no datagram received, set the slow flag
                     slow_flag = True
                     break
-
-                # If ACK is received, update adwnd and cur_ack_seq
                 elif tcp_datagram.flags & ACK == ACK:
+                    # Update the advertised window and current acknowledgement sequence number
                     adwnd = min(65535, tcp_datagram.adwind)
                     if tcp_datagram.ack_seq < cur_ack_seq:
                         slow_flag = True
                     else:
                         cur_ack_seq = tcp_datagram.ack_seq
-                
-                # If FIN is received, acknowledge and close the connection
                 elif tcp_datagram.flags & FIN == FIN:
-                    # Acknowledge the received FIN packet
+                    # Acknowledge the received FIN packet and close the connection
                     self._ack_seq += 1
                     self._send_one(flags=ACK, data="")
-                    # Close the connection and break out of the loop
                     connection_closed = True
                     break
-            
-            self.seq = cur_ack_seq
+
+            # Update the sequence number and congestion control variables
+            self._seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
 
 
     def update_congestion_control(self, slow_flag):
+        """
+        Updates the congestion control window size based on the slow_flag.
+
+        Parameters
+        ----------
+        slow_flag : bool
+            A flag indicating whether the transmission is experiencing slow start or congestion
+        """
+        # If slow_flag is not set, then update the congestion window based on the additive increase
         if not slow_flag:
+            # Double the congestion window if it's less than half the maximum congestion window size
             if self._cwnd * 2 <= self._maxcwnd:
                 self._cwnd *= 2
+            # If the congestion window is more than half the maximum size, increment it by 1
             elif self._cwnd < self._maxcwnd:
                 self._cwnd += 1
+        # If slow_flag is set, reset the congestion window to 1 for slow start
         else:
             self._cwnd = 1
 
 
-    # Recv
-    def check_incomingPKT(self, packet):
+    def _check_incoming_packets(self, packet):
+        """
+        Validates the incoming packet by checking the source and destination IP addresses,
+        source and destination ports, and IP and TCP checksums.
+
+        Parameters
+        ----------
+        packet : bytes
+            The raw packet received
+
+        Returns
+        -------
+        bool
+            True if the packet passes all validation checks, False otherwise
+        """
         # Extract the IP and TCP headers from the packet
         ip_datagram = self.unpack_ip_packet(packet)
         tcp_datagram = self.unpack_tcp_packet(packet)
+
+        # Check if the source and destination IP addresses in the packet match the expected values
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
             # print("Invalid ip address")
             return False
+
+        # Check if the source and destination ports in the packet match the expected values
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
             # print("Invalid port")
             return False
-        # All checks passed, return True
+
+        # Verify the IP checksum of the received packet
         if not self.verify_ipv4_checksum(packet):
             return False
-        # if not self.verify_tcp_checksum(packet):
-        #     return False
+
+        # Verify the TCP checksum of the received packet
+        if not self.verify_tcp_checksum(packet):
+            return False
+
+        # All checks passed, return True
         return True
 
+
     def _receive_one(self, timeout=60, size=65535):
+        """
+        Receives a single packet from the socket, checks its validity, and returns the TCP datagram
+        if the packet is valid.
+
+        Parameters
+        ----------
+        timeout : int, optional
+            The socket timeout in seconds, by default 60
+        size : int, optional
+            The maximum number of bytes to receive, by default 65535
+
+        Returns
+        -------
+        TCPDatagram or None
+            The TCP datagram if a valid packet is received, None otherwise or if the socket times out
+        """
         try:
+            # Set the socket timeout
             self._recv_socket.settimeout(timeout)
+
+            # Receive the packet from the socket
             received_pkt = self._recv_socket.recv(size)
+
+            # If the received packet is empty, return None
             if len(received_pkt) == 0:
                 return None
-            if self.check_incomingPKT(received_pkt):
+
+            # Check the validity of the received packet
+            if self._check_incoming_packets(received_pkt):
+                # Unpack the IP and TCP headers from the received packet
                 ip_datagram = self.unpack_ip_packet(received_pkt)
                 tcp_datagram = self.unpack_tcp_packet(received_pkt)
+
+                # Return the TCP datagram if the packet is valid
                 return tcp_datagram
+
+        # If the socket times out, return None
         except socket.timeout:
             return None
 
+
     def receive_all(self):
+        """
+        Receives all incoming packets and combines them into a single payload.
+        
+        Returns
+        -------
+        tuple
+            A tuple containing the HTTP header and the body of the received payload
+        """
+        # Initialize the buffer for storing received packets
         buffer = None
+        # Save the current acknowledgement sequence number as the starting sequence
         start_seq = self._ack_seq
+
+        # Call the _receive_all() method to receive all packets and store them in the buffer
         buffer = self._receive_all()
 
+        # Initialize a list for storing the received data
         received_data = []
+
+        # Iterate through the buffer using the sequence numbers
         while start_seq in buffer:
+            # Append the data from the buffer to the received_data list
             received_data.append(buffer[start_seq])
+
+            # Increment the start_seq by the length of the received data segment
             start_seq += len(buffer[start_seq])
 
+        # Combine the received data segments into a single payload
         total_payload = b''.join(received_data)
+
+        # Separate the HTTP header and the body of the payload
         header, _, body = total_payload.partition(b'\r\n\r\n')
 
+        # Return the header and body as a tuple
         return header, body
+
         
     def _receive_all(self, buffer_limit = 65535):
         buffer = {}
