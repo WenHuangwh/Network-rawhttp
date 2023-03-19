@@ -451,7 +451,7 @@ class RawSocket:
         # Initialize the duplicate ACK counter and timeout counter
         dup_ack_counter = 0
         timeout_counter = 0
-        max_timeouts = 3
+        max_timeouts = 1000
         max_dup = 3
 
         receive_FIN = False
