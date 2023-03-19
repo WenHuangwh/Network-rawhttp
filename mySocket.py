@@ -334,6 +334,14 @@ class RawSocket:
         bool
             True if the packet passes all validation checks, False otherwise
         """
+        # Verify the IP checksum of the received packet
+        if not self.verify_ipv4_checksum(packet):
+            return False
+
+        # Verify the TCP checksum of the received packet
+        if not self.verify_tcp_checksum(packet):
+            return False
+
         # Extract the IP and TCP headers from the packet
         ip_datagram = self.unpack_ip_packet(packet)
         tcp_datagram = self.unpack_tcp_packet(packet)
@@ -346,14 +354,6 @@ class RawSocket:
         # Check if the source and destination ports in the packet match the expected values
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
             # print("Invalid port")
-            return False
-
-        # Verify the IP checksum of the received packet
-        if not self.verify_ipv4_checksum(packet):
-            return False
-
-        # Verify the TCP checksum of the received packet
-        if not self.verify_tcp_checksum(packet):
             return False
 
         # All checks passed, return True
