@@ -19,7 +19,7 @@ def getMyIpAddr(dest_ip_addr, dest_port):
 
 def main():
 
-    start = time.time()
+    start_time = time.time()
     print("Welcome to rawhttpget program")
     url = sys.argv[1]
 
@@ -61,7 +61,7 @@ def main():
         log_file.write(body)
 
     print("Payload saved to received_payload.log")
-    print(f"Time: {time.time() - start}")
+    print(f"Time: {time.time() - start_time}")
 
 if __name__ == "__main__":
     main()
