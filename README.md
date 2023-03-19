@@ -38,7 +38,6 @@ Challenges
 3. Testing and developing low-level programs in a virtual machine: Both team members lacked experience with low-level networking, which added to the challenges faced. Setting up the virtual machine environment required multiple steps, such as configuring IP tables, installing tools, and turning off network offloading.
 
 Collaboration
-
     Xiaoyao was mainly responsilble for designing the Raw Socket class and its attributes. She also worked on the assembly of TCP and IP header， taking into account all the required information to ensure accurate packet construction. Moreover, Xiaoyao worked diligently on verifying the integrity of network packets using TCP and IP checksums, as well as other relevant information to maintain the robustness and reliability of the communication.
     
     Wen concentrated on developing the core functionality of the Raw Socket class by designing and implementing the receive and send functions. He paid close attention to the various challenges associated with maintaining a stable connection and addressed them by incorporating congestion control mechanisms, timeout handling, and other techniques to improve the overall performance and smoothness of the connection.
