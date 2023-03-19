@@ -295,8 +295,6 @@ class RawSocket:
             # Update the sequence number and congestion control variables
             self._seq = cur_ack_seq
             self.update_congestion_control(slow_flag)
-            
-        self._send_one(FIN, "")
 
 
     def update_congestion_control(self, slow_flag):
