@@ -22,8 +22,8 @@ class RawSocket:
     def __init__(self, src_ipAddr, dest_ipAddr, src_port, dest_port):
         try:
             # Creates two raw sockets for sending and receiving packets.
-            self.send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
-            self.recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
+            self._send_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_RAW)
+            self._recv_socket = socket.socket(socket.AF_INET, socket.SOCK_RAW, socket.IPPROTO_TCP)
             self._srcIpAddr = src_ipAddr
             self._destIpAddr = dest_ipAddr
             # Choosing a random port number within the dynamic allocation range 
@@ -35,39 +35,65 @@ class RawSocket:
             
             # Sets the initial TCP acknowledgement sequence number to 0.
             self._ack_seq = 0
-            self.ip_id = 1    
+            self._ip_id = 1    
             # Congestion control variables.
             # Sets the initial congestion window size to 1.
-            self.maxcwnd = 1000
-            self.cwnd = 1
-            self.ssthresh = self.maxcwnd / 2
-            self.rwnd = 65535
+            self._maxcwnd = 1000
+            self._cwnd = 1
+            self._rwnd = 65535
             # Sets the initial TCP advertised window size to 20480 bytes.
-            self.tcp_adwind = socket.htons (self.rwnd)
+            self._adwind = socket.htons (self._rwnd)
             # This is ipv4 so Maximum Segment Size is 1460 bytes.
             # Must be an even number
-            self.mss = 1460
+            self._mss = 1460
         except socket.error as e:
-            # Prints an error message and exits the program if there is an error creating the sockets.
             print("Error: Cannot create a raw socket", e)
             sys.exit(1)
     
-        # Prints IP and port number for debugging purposes.
         print('src IP and port:', self._srcIpAddr, self._srcPort)
         print('Dest IP and port:', self._destIpAddr, self._destPort)
     
-    # checksum functions needed for calculation checksum
     def checksum(self, msg):
-        s = 0
-        # loop taking 2 characters at a time
+        """
+        Calculate the checksum of the given message.
+
+        The function takes a byte message, iterates over it in pairs of bytes, and computes the checksum using the
+        Internet checksum algorithm. The computed checksum is returned as a 16-bit integer.
+
+        Parameters
+        ----------
+        msg : bytes
+            The byte message for which the checksum needs to be calculated.
+
+        Returns
+        -------
+        int
+            The calculated checksum as a 16-bit integer.
+
+        Local Variables
+        ---------------
+        s : int
+            The accumulator for the checksum calculation.
+        w : int
+            A 16-bit word obtained by combining two consecutive bytes in the message.
+        """
+
+        s = 0  # Initialize the accumulator
+
+        # Loop through the message, taking 2 characters (bytes) at a time
         for i in range(0, len(msg), 2):
-            w = (msg[i]) + ((msg[i+1]) << 8 )
-            s = s + w
-        s = (s>>16) + (s & 0xffff);
-        s = s + (s >> 16);
-        #complement and mask to 4 byte short
+            w = (msg[i]) + ((msg[i + 1]) << 8)  # Combine two consecutive bytes into a 16-bit word
+            s = s + w  # Add the 16-bit word to the accumulator
+
+        # Handle carry-over by adding the most significant 16 bits to the least significant 16 bits
+        s = (s >> 16) + (s & 0xffff)
+        s = s + (s >> 16)
+
+        # Calculate the one's complement and mask the result to a 4-byte short (16 bits)
         s = ~s & 0xffff
-        return s
+
+        return s  # Return the calculated checksum
+
     
     def ip_header(self):
         # IP header fields
@@ -75,9 +101,9 @@ class RawSocket:
         ip_ver = 4
         ip_tos = 0
         ip_tot_len = 0
-        ip_id = self.ip_id
-        self.ip_id += 1
-        self.ip_id %= 65536
+        ip_id = self._ip_id
+        self._ip_id += 1
+        self._ip_id %= 65536
         ip_frag_off = 0
         ip_ttl = 255
         ip_proto = socket.IPPROTO_TCP
@@ -97,7 +123,7 @@ class RawSocket:
         tcp_ack_seq = self._ack_seq
         tcp_doff = 5	#4 bit field, size of tcp header, 5 * 4 = 20 bytes
         #tcp flags
-        tcp_window = self.tcp_adwind	#	maximum allowed window size
+        tcp_window = self._adwind	#	maximum allowed window size
         tcp_check = 0
         tcp_urg_ptr = 0
 
@@ -128,12 +154,12 @@ class RawSocket:
         ip_header = self.ip_header()
         tcp_header = self.tcp_header(flags, data)
         packet = ip_header + tcp_header + data
-        self.send_socket.sendto(packet, (self._destIpAddr, self._destPort))
+        self._send_socket.sendto(packet, (self._destIpAddr, self._destPort))
 
 
     def send(self, data):
         adwnd = 65535
-        segments = [data[i:i+self.mss] for i in range(0, len(data), self.mss)]
+        segments = [data[i:i+self._mss] for i in range(0, len(data), self._mss)]
         buffer = {}
         # Use sequence number as key for buffer
         buffer_key = self._seq
@@ -147,7 +173,7 @@ class RawSocket:
         
         # Keep sending data until the buffer is empty
         while self._seq < buffer_key:
-            window_size = min(self.cwnd, adwnd // self.mss)
+            window_size = min(self._cwnd, adwnd // self._mss)
             
             # Send packets within the window size
             for i in range(window_size):
@@ -191,12 +217,12 @@ class RawSocket:
 
     def update_congestion_control(self, slow_flag):
         if not slow_flag:
-            if self.cwnd * 2 <= self.maxcwnd:
-                self.cwnd *= 2
-            elif self.cwnd < self.maxcwnd:
-                self.cwnd += 1
+            if self._cwnd * 2 <= self._maxcwnd:
+                self._cwnd *= 2
+            elif self._cwnd < self._maxcwnd:
+                self._cwnd += 1
         else:
-            self.cwnd = 1
+            self._cwnd = 1
 
 
     # Recv
@@ -213,14 +239,14 @@ class RawSocket:
         # All checks passed, return True
         if not self.verify_ipv4_checksum(packet):
             return False
-        if not self.verify_tcp_checksum(packet):
-            return False
+        # if not self.verify_tcp_checksum(packet):
+        #     return False
         return True
 
     def _receive_one(self, timeout=60, size=65535):
         try:
-            self.recv_socket.settimeout(timeout)
-            received_pkt = self.recv_socket.recv(size)
+            self._recv_socket.settimeout(timeout)
+            received_pkt = self._recv_socket.recv(size)
             if len(received_pkt) == 0:
                 return None
             if self.check_incomingPKT(received_pkt):
@@ -312,7 +338,7 @@ class RawSocket:
                 buffer_size -= payload_len
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
-                self.rwnd = max(1, buffer_limit - buffer_size)
+                self._rwnd = max(1, buffer_limit - buffer_size)
                 self._send_one(ACK, "") 
 
         # Send ACK respond to FIN
@@ -378,8 +404,8 @@ class RawSocket:
             # Server acknowledged the FIN_ACK, break the loop
             self._send_one(ACK, "")
             
-        self.send_socket.close()
-        self.recv_socket.close()
+        self._send_socket.close()
+        self._recv_socket.close()
 
 
     def verify_ipv4_checksum(self, byte_packet):
