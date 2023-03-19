@@ -741,34 +741,27 @@ class RawSocket:
     #     return is_valid
 
     
-    def checksum(self, data):
+    def checksum(self, packet):
         """
-        Calculate the checksum of the given data.
-
-        This function takes a bytes-like object as input and computes the checksum using the Internet checksum algorithm.
-        The computed checksum is returned as a 16-bit integer.
-
+        Calculate the checksum of a packet in bytes. Referenced from
+        https://www.kytta.dev/blog/tcp-packets-from-scratch-in-python-3/
         Parameters
         ----------
-        data : bytes
-            The bytes-like object for which the checksum needs to be calculated.
-
+        packet: bytes
+            Raw bytes of a packet
         Returns
         -------
         int
-            The calculated checksum as a 16-bit integer.
+            Checksum of the packet
         """
-        checksum = 0
-        for i in range(0, len(data), 2):
-            if i + 1 < len(data):
-                word = (data[i] << 8) + data[i + 1]
-            else:
-                word = (data[i] << 8)
-            checksum += word
-        checksum = (checksum & 0xFFFF) + (checksum >> 16)
-        checksum = (checksum & 0xFFFF) + (checksum >> 16)
-        checksum = ~checksum & 0xFFFF
-        return checksum
+        if len(packet) % 2 != 0:
+            packet += b'\0'
+
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
+
+        return (~res) & 0xffff
 
     def verify_ipv4_checksum(self, byte_packet):
         """
