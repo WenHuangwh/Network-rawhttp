@@ -94,10 +94,14 @@ def main():
 
     # Receive data from server
     print("Receiving data")
-    header, body = rawSocket.receive_all()
+    data = rawSocket.receive_all()
+    if data == None:
+        print("Empty data")
+        
+    header, body = data
 
     # Check data
-    if header == None or not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
+    if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
         print("Please try again")
         return
 
