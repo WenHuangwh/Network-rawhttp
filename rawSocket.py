@@ -97,6 +97,8 @@ class RawSocket:
         w : int
             A 16-bit word obtained by combining two consecutive bytes in the message.
         """
+        if len(msg) % 2 != 0:
+            packet += b'\0'
 
         s = 0  # Initialize the accumulator
 
@@ -717,23 +719,8 @@ class RawSocket:
 
         pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
 
-        def calculate_checksum(data):
-            checksum = 0
-            for i in range(0, len(data), 2):
-                if i + 1 < len(data):
-                    word = (data[i] << 8) + data[i + 1]
-                else:
-                    word = (data[i] << 8)
-                checksum += word
-            checksum = (checksum >> 16) + (checksum & 0xFFFF)
-            checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
-            return checksum
-
-        if len(tcp_data) % 2 != 0:
-            tcp_data += b'\x00'
-
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = calculate_checksum(checksum_data)
+        calculated_checksum = self.checksum(checksum_data)
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
         is_valid = (calculated_checksum == original_checksum)

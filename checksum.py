@@ -11,7 +11,7 @@ import array
 class RawSocket:
 
     def __init__(self):
-        self.x = 1
+        return
 
     def verify_ipv4_checksum(self, byte_packet):
 
@@ -23,6 +23,7 @@ class RawSocket:
         checksum_in_header == calculated_checksum
         print("IP: ")
         print(self.checksum(ip_header))
+        print(self.checksum1(ip_header))
         print(checksum_in_header)
         return 
 
@@ -51,14 +52,36 @@ class RawSocket:
         psh = pack('!4s4sBBH', src_address, dest_address, placeholder, protocol, tcp_length)
         psh = psh + tcp_header + tcp_data
 
+        tcp_packet = bytes_packet[20:]
+        source_address = ip_header[12:16]
+        dest_address = ip_header[16:20]
+        pseudo_header = pack('!4s4sBBH',source_address, dest_address, 0, socket.IPPROTO_TCP, len(tcp_packet))
+
+        ip_header_bytes = bytes_packet[:20]
+        ip_header = unpack('!BBHHHBBH4s4s', ip_header_bytes)
+        protocol = ip_header[6]
+
+        if protocol != 6:
+            print("Not a TCP packet.")
+            return False
+
+        ip_header_length = (ip_header[0] & 0x0F) * 4
+        tcp_header_length = ((bytes_packet[ip_header_length + 12] >> 4) & 0xF) * 4
+        tcp_header_bytes = bytes_packet[ip_header_length:ip_header_length + tcp_header_length]
+        original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
+
+        # return self.calculate_checksum(pseudo_header + tcp_packet) == 0
+
         # Calculate the checksum using the checksum function and compare it to the received checksum
         print("TCP: ")
         print(self.checksum(psh))
-        print(received_checksum)
+        print(self.checksum(pseudo_header + bytes_packet[20:]))
+        print(original_checksum)
         return 
             
-    
     def checksum(self, msg):
+        if len(msg) % 2 != 0:
+            packet += b'\0'
         s = 0  # Initialize the accumulator
 
         # Loop through the message, taking 2 characters (bytes) at a time
@@ -74,6 +97,15 @@ class RawSocket:
         s = ~s & 0xffff
 
         return s  # Return the calculated checksum
+
+    def checksum1(self, packet):
+        if len(packet) % 2 != 0:
+            packet += b'\0'
+        res = sum(array.array("H", packet))
+        res = (res >> 16) + (res & 0xffff)
+        res += res >> 16
+
+        return (~res) & 0xffff
 
     
     def ip_header(self):
