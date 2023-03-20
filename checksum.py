@@ -24,6 +24,7 @@ class RawSocket:
         print("IP: ")
         print(self.checksum(ip_header))
         print(self.checksum1(ip_header))
+        print(self.checksum2(ip_header))
         print(checksum_in_header)
         return 
 
@@ -75,7 +76,8 @@ class RawSocket:
         # Calculate the checksum using the checksum function and compare it to the received checksum
         print("TCP: ")
         print(self.checksum(psh))
-        print(self.checksum(pseudo_header + bytes_packet[20:]))
+        print(self.checksum1(psh))
+        print(self.checksum2(psh))
         print(original_checksum)
         return 
             
@@ -88,6 +90,8 @@ class RawSocket:
         for i in range(0, len(msg), 2):
             w = (msg[i]) + ((msg[i + 1]) << 8)  # Combine two consecutive bytes into a 16-bit word
             s = s + w  # Add the 16-bit word to the accumulator
+
+        print(f"c1: {s}")
 
         # Handle carry-over by adding the most significant 16 bits to the least significant 16 bits
         s = (s >> 16) + (s & 0xffff)
@@ -102,10 +106,32 @@ class RawSocket:
         if len(packet) % 2 != 0:
             packet += b'\0'
         res = sum(array.array("H", packet))
+
+        print(f"c2: {res}")
+
         res = (res >> 16) + (res & 0xffff)
         res += res >> 16
 
         return (~res) & 0xffff
+
+    def checksum2(self, data):
+        if len(data) % 2 != 0:
+            tcp_data += b'\x00'
+
+        checksum = 0
+        for i in range(0, len(data), 2):
+            if i + 1 < len(data):
+                word = (data[i] << 8) + data[i + 1]
+            else:
+                word = (data[i] << 8)
+            checksum += word
+
+        print(f"c3: {checksum}")
+
+        checksum = (checksum >> 16) + (checksum & 0xFFFF)
+        checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
+
+        return checksum
 
     
     def ip_header(self):
