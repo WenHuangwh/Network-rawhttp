@@ -98,7 +98,7 @@ def main():
 
     # Check data
     if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
-        print("HTTP is not 200")
+        print("Please try again")
         return
 
     # Save the payload to a file

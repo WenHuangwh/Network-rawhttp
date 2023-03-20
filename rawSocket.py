@@ -491,7 +491,7 @@ class RawSocket:
                 if timeout_counter >= max_timeouts:
                     print("Time out, close connection")
                     self.close()
-                    return buffer
+                    return None
                 continue
             else:
                 timeout_counter = 0
