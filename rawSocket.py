@@ -419,7 +419,7 @@ class RawSocket:
         start_seq = self._ack_seq
 
         # Call the _receive_all() method to receive all packets and store them in the buffer
-        while time.time() - start <= timeout and buffer != None:
+        while time.time() - start_time <= timeout and buffer != None:
             buffer = self._receive_all()
 
         if buffer == None:
