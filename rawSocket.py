@@ -351,12 +351,10 @@ class RawSocket:
 
         # Check if the source and destination IP addresses in the packet match the expected values
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
-            print("Invalid ip address")
             return False
 
         # Check if the source and destination ports in the packet match the expected values
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
-            print("Invalid port")
             return False
 
         # All checks passed, return True
