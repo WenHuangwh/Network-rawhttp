@@ -403,7 +403,7 @@ class RawSocket:
             return None
 
 
-    def receive_all(self):
+    def receive_all(self, timeout = 60):
         """
         Receives all incoming packets and combines them into a single payload.
         
@@ -412,13 +412,19 @@ class RawSocket:
         tuple
             A tuple containing the HTTP header and the body of the received payload
         """
+        start_time = time.time()
         # Initialize the buffer for storing received packets
         buffer = None
         # Save the current acknowledgement sequence number as the starting sequence
         start_seq = self._ack_seq
 
         # Call the _receive_all() method to receive all packets and store them in the buffer
-        buffer = self._receive_all()
+        while time.time() - start <= timeout and buffer != None:
+            buffer = self._receive_all()
+
+        if buffer == None:
+            print("Error in downloading")
+            return
 
         # Initialize a list for storing the received data
         received_data = []
