@@ -58,7 +58,7 @@ class RawSocket:
             self._cwnd = 1
             self._rwnd = 65535
 
-            # Sets the initial TCP advertised window size.
+            # Sets the initial TCP advertised window size to 20480 bytes.
             self._adwind = socket.htons(self._rwnd)
 
             # This is ipv4, so the Maximum Segment Size is 1460 bytes.
@@ -236,8 +236,7 @@ class RawSocket:
         data : str
             The data to be sent
         """
-        # Initialize the window size
-        self._cwnd = 1
+        # Initialize the advertised window size
         adwnd = 65535
 
         # Split the data into segments based on the Maximum Segment Size (MSS)
@@ -337,14 +336,10 @@ class RawSocket:
         """
         # Verify the IP checksum of the received packet
         if not self.verify_ipv4_checksum(packet):
-            print("invalid ip")
-            print(packet)
             return False
 
         # Verify the TCP checksum of the received packet
         if not self.verify_tcp_checksum(packet):
-            print("invalid tcp")
-            print(packet)
             return False
 
         # Extract the IP and TCP headers from the packet
@@ -528,7 +523,6 @@ class RawSocket:
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
                 self._rwnd = max(1, buffer_limit - buffer_size)
-                # self._adwind = socket.htons(self._rwnd)
                 self._send_one(ACK, "") 
 
         # Finalize the connection by sending ACK and FIN_ACK packets
