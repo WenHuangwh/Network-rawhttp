@@ -45,7 +45,7 @@ def generate_get_req(parsed_url):
     str
         The generated HTTP GET request.
     """
-    return f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\n"
+    return f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Close\r\n\r\n"
 
 def main():
     """

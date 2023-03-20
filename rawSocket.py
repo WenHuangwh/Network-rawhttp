@@ -8,7 +8,6 @@ from collections import namedtuple
 from functools import reduce
 import array
 
-
 SYN = 0x02   # 0b00000010
 ACK = 0x10   # 0b00010000
 SYN_ACK = 0x12   # 0b00010010
@@ -739,6 +738,3 @@ class RawSocket:
 
         # Return the result of the checksum validation
         return is_valid
-
-
-
