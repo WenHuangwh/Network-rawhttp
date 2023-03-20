@@ -460,6 +460,9 @@ class RawSocket:
 
         start_seq = self._ack_seq
         
+        # In case that FIN arrives not in normal order
+        # Update this when receiving FIN
+        # use this to check if we get all data
         data_is_complete_seq = 0x100000000 + 1
 
         # Initialize the duplicate ACK counter and timeout counter
@@ -475,6 +478,7 @@ class RawSocket:
 
             tcp_datagram = self._receive_one()
 
+            # Packet is invalid
             if tcp_datagram is None:
                 timeout_counter += 1
                 self._send_one(ACK, "") 
@@ -485,10 +489,11 @@ class RawSocket:
                 continue
             else:
                 timeout_counter = 0
-                
+            
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
+            # FIN flags
             if tcp_datagram.flags & FIN == FIN:
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
