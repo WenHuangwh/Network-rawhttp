@@ -629,9 +629,7 @@ class RawSocket:
             # send sefl.seq, self.ack = server.seq + 1
             self._ack_seq = tcp_datagram.seq + 1
             self._send_one(ACK, "")
-            print("Connected")
             return True
-        print("Connect failed")
         # Return the result of the handshake
         return False
 

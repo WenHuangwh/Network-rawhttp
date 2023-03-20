@@ -76,11 +76,15 @@ def main():
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     
     # Handshake
+    print("Connecting")
     connection = False
     while not connection and time.time() - start_time < 60:
         connection = rawSocket.handshake()
-    if not connection:
-        print("connection failed")
+
+    if connection:
+        print("Connected")
+    else:
+        print("Connection failed")
         return
 
     # Generat GET request and send
