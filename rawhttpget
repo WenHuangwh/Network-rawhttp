@@ -81,6 +81,7 @@ def main():
 
     # Generat GET request and send
     request = generate_get_req(parsed_url)
+    print(f"Request: {request}")
     rawSocket.send(request)
 
     # Receive data from server
