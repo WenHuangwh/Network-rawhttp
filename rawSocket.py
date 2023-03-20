@@ -235,7 +235,8 @@ class RawSocket:
         data : str
             The data to be sent
         """
-        # Initialize the advertised window size
+        # Initialize the window size
+        self._cwnd = 1
         adwnd = 65535
 
         # Split the data into segments based on the Maximum Segment Size (MSS)
@@ -522,6 +523,7 @@ class RawSocket:
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
                 self._rwnd = max(1, buffer_limit - buffer_size)
+                self._adwind = socket.htons(self._rwnd)
                 self._send_one(ACK, "") 
 
         # Finalize the connection by sending ACK and FIN_ACK packets
