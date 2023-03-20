@@ -336,10 +336,14 @@ class RawSocket:
         """
         # Verify the IP checksum of the received packet
         if not self.verify_ipv4_checksum(packet):
+            print("invalid ip")
+            print(packet)
             return False
 
         # Verify the TCP checksum of the received packet
         if not self.verify_tcp_checksum(packet):
+            print("invalid tcp")
+            print(packet)
             return False
 
         # Extract the IP and TCP headers from the packet
