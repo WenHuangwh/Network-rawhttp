@@ -76,9 +76,9 @@ def main():
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     
     # Handshake
-    print("Connecting")
     connection = False
     while not connection and time.time() - start_time < 60:
+        print("Connecting")
         connection = rawSocket.handshake()
 
     if connection:
