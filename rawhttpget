@@ -97,7 +97,7 @@ def main():
     header, body = rawSocket.receive_all()
 
     # Check data
-    if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
+    if header == None or not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
         print("Please try again")
         return
 
