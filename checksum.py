@@ -1,3 +1,58 @@
+    
+class RawSocket:
+
+    def __init__(self):
+        bytes_packet = , bytes_packet
+        self.verify_ipv4_checksum(bytes_packet)
+        self.verify_tcp_checksum(bytes_packet)
+
+
+    def verify_ipv4_checksum(self, byte_packet):
+
+        # Validate the IPv4 header and calculate the checksum
+        ip_header = byte_packet[:20]  # Extract the IP header from the packet
+        received_checksum = unpack('!H', ip_header[10:12])[0]  # Extract the received checksum from the IP header
+        ip_header = ip_header[:10] + b'\x00\x00' + ip_header[12:]  # Set the checksum field to 0 in the header
+
+        # Calculate the checksum using the checksum function and compare it to the received checksum
+        self.checksum(ip_header) == received_checksum
+        print("IP: ")
+        print(self.checksum(ip_header))
+        print(received_checksum)
+        return 
+
+
+    def verify_tcp_checksum(self, bytes_packet):
+
+        # Validate the TCP packet and calculate the checksum
+        ip_header = bytes_packet[:20]  # Extract the IP header from the packet
+        tcp_header_length = (bytes_packet[32] >> 4) * 4  # Calculate the length of the TCP header
+        tcp_header = bytes_packet[20:20 + tcp_header_length]  # Extract the TCP header from the packet
+        tcp_data = bytes_packet[20 + tcp_header_length:]  # Extract the TCP data from the packet
+
+        received_checksum = unpack('!H', tcp_header[16:18])[0]
+        
+        # Set the checksum field to 0 in the TCP header
+        tcp_header = tcp_header[:16] + b'\x00\x00' + tcp_header[18:]
+
+        # Extract the source and destination IP addresses from the IP header
+        src_address = ip_header[12:16]
+        dest_address = ip_header[16:20]
+
+        # Create the pseudo header
+        placeholder = 0
+        protocol = socket.IPPROTO_TCP
+        tcp_length = len(tcp_header) + len(tcp_data)
+        psh = pack('!4s4sBBH', src_address, dest_address, placeholder, protocol, tcp_length)
+        psh = psh + tcp_header + tcp_data
+
+        # Calculate the checksum using the checksum function and compare it to the received checksum
+        print("TCP: ")
+        print(self.checksum(psh))
+        print(received_checksum)
+        return 
+            
+    
     def checksum(self, msg):
         s = 0  # Initialize the accumulator
 

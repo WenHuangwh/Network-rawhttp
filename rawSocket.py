@@ -335,13 +335,13 @@ class RawSocket:
             True if the packet passes all validation checks, False otherwise
         """
         # Verify the IP checksum of the received packet
-        if not self.verify_ipv4_checksum(packet):
+        if not self.verify_ipv4_checksum(packet[:20]):
             print("invalid ip")
             print(packet)
             return False
 
         # Verify the TCP checksum of the received packet
-        if not self.verify_tcp_checksum(packet):
+        if not self.verify_tcp_checksum(packet[20:]):
             print("invalid tcp")
             print(packet)
             return False
