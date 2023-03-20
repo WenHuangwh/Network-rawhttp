@@ -85,10 +85,11 @@ def main():
 
     # Generat GET request and send
     request = generate_get_req(parsed_url)
-    print(f"Request: {request}")
+    print(f"Sending request: {request}")
     rawSocket.send(request)
 
     # Receive data from server
+    print("Receiving data")
     header, body = rawSocket.receive_all()
 
     # Check data
@@ -100,7 +101,7 @@ def main():
     with open(filename, "wb") as log_file:
         log_file.write(body)
 
-    print("Payload saved to received_payload.log")
+    print(f"Payload saved to {filename}")
     print(f"Time: {time.time() - start_time}")
 
 if __name__ == "__main__":
