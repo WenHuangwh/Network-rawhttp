@@ -269,6 +269,7 @@ class RawSocket:
 
             # Receive ACKs for the sent packets
             slow_flag = False
+            # Record the seq number the receiver respond
             cur_ack_seq = -1
             for i in range(window_size):
                 # Receive a TCP datagram and check its flags
@@ -454,7 +455,8 @@ class RawSocket:
         dict
             A dictionary containing the received data segments with their sequence numbers as keys
         """
-        # Initialize the buffer, buffer_size, start_seq, and data_is_complete_seq
+        # Initialize the buffer, buffer_size, start_seq, and data_is_complete_seq counter
+        # buffer is a map, key: tcp datagram seq number, value: tcp datagram payload
         buffer = {}
         buffer_size = 0
 
@@ -476,6 +478,10 @@ class RawSocket:
         # Main loop to receive and process incoming packets
         while not receive_FIN or data_is_complete_seq != self._ack_seq:
 
+            # If packet is invalid: checksum, ip address or port invalid or timeout
+            # return None
+            # Else
+            # return a TCP datagram
             tcp_datagram = self._receive_one()
 
             # Packet is invalid
@@ -493,7 +499,7 @@ class RawSocket:
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
-            # FIN flags
+            # Packet with FIN flags
             if tcp_datagram.flags & FIN == FIN:
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
@@ -525,10 +531,13 @@ class RawSocket:
                 payload = buffer[self._ack_seq]
                 payload_len = len(payload)
                 buffer_size -= payload_len
+                # update ack seq number
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
+                # update adwind
                 self._rwnd = max(1, buffer_limit - buffer_size)
                 self._adwind = socket.htons(self._rwnd)
+                # send ACK to server
                 self._send_one(ACK, "") 
 
         # Finalize the connection by sending ACK and FIN_ACK packets
