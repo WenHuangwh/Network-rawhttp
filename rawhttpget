@@ -95,9 +95,9 @@ def main():
     # Receive data from server
     print("Receiving data")
     data = rawSocket.receive_all()
-    if data == None:
+    if data == None or len(data) == 0:
         print("Empty data")
-        
+
     header, body = data
 
     # Check data
