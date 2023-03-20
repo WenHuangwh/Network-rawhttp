@@ -8,7 +8,6 @@ from collections import namedtuple
 from functools import reduce
 import array
 
-
 SYN = 0x02   # 0b00000010
 ACK = 0x10   # 0b00010000
 SYN_ACK = 0x12   # 0b00010010
@@ -236,7 +235,8 @@ class RawSocket:
         data : str
             The data to be sent
         """
-        # Initialize the advertised window size
+        # Initialize the window size
+        self._cwnd = 1
         adwnd = 65535
 
         # Split the data into segments based on the Maximum Segment Size (MSS)
@@ -269,6 +269,7 @@ class RawSocket:
 
             # Receive ACKs for the sent packets
             slow_flag = False
+            # Record the seq number the receiver respond
             cur_ack_seq = -1
             for i in range(window_size):
                 # Receive a TCP datagram and check its flags
@@ -454,12 +455,16 @@ class RawSocket:
         dict
             A dictionary containing the received data segments with their sequence numbers as keys
         """
-        # Initialize the buffer, buffer_size, start_seq, and data_is_complete_seq
+        # Initialize the buffer, buffer_size, start_seq, and data_is_complete_seq counter
+        # buffer is a map, key: tcp datagram seq number, value: tcp datagram payload
         buffer = {}
         buffer_size = 0
 
         start_seq = self._ack_seq
         
+        # In case that FIN arrives not in normal order
+        # Update this when receiving FIN
+        # use this to check if we get all data
         data_is_complete_seq = 0x100000000 + 1
 
         # Initialize the duplicate ACK counter and timeout counter
@@ -473,8 +478,13 @@ class RawSocket:
         # Main loop to receive and process incoming packets
         while not receive_FIN or data_is_complete_seq != self._ack_seq:
 
+            # If packet is invalid: checksum, ip address or port invalid or timeout
+            # return None
+            # Else
+            # return a TCP datagram
             tcp_datagram = self._receive_one()
 
+            # Packet is invalid
             if tcp_datagram is None:
                 timeout_counter += 1
                 self._send_one(ACK, "") 
@@ -485,10 +495,11 @@ class RawSocket:
                 continue
             else:
                 timeout_counter = 0
-                
+            
             if tcp_datagram.ack_seq != self._seq:
                 continue
 
+            # Packet with FIN flags
             if tcp_datagram.flags & FIN == FIN:
                 payload_len = len(tcp_datagram.payload)
                 if payload_len != 0:
@@ -520,9 +531,13 @@ class RawSocket:
                 payload = buffer[self._ack_seq]
                 payload_len = len(payload)
                 buffer_size -= payload_len
+                # update ack seq number
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
+                # update adwind
                 self._rwnd = max(1, buffer_limit - buffer_size)
+                self._adwind = socket.htons(self._rwnd)
+                # send ACK to server
                 self._send_one(ACK, "") 
 
         # Finalize the connection by sending ACK and FIN_ACK packets
@@ -716,29 +731,22 @@ class RawSocket:
 
         pseudo_header = src_ip + dst_ip + pack('!BBH', 0, protocol, tcp_length)
 
-        def calculate_checksum(data):
-            checksum = 0
-            for i in range(0, len(data), 2):
-                if i + 1 < len(data):
-                    word = (data[i] << 8) + data[i + 1]
-                else:
-                    word = (data[i] << 8)
-                checksum += word
-            checksum = (checksum >> 16) + (checksum & 0xFFFF)
-            checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
-            return checksum
-
         if len(tcp_data) % 2 != 0:
             tcp_data += b'\x00'
 
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-        calculated_checksum = calculate_checksum(checksum_data)
+        checksum = 0
+        for i in range(0, len(checksum_data), 2):
+            if i + 1 < len(checksum_data):
+                word = (checksum_data[i] << 8) + checksum_data[i + 1]
+            else:
+                word = (checksum_data[i] << 8)
+            checksum += word
+        checksum = (checksum >> 16) + (checksum & 0xFFFF)
+        checksum = ~(checksum + (checksum >> 16)) & 0xFFFF
 
         original_checksum = (tcp_header_bytes[16] << 8) + tcp_header_bytes[17]
-        is_valid = (calculated_checksum == original_checksum)
+        is_valid = (checksum == original_checksum)
 
         # Return the result of the checksum validation
         return is_valid
-
-
-

@@ -61,29 +61,32 @@ def main():
     if not filename:
         filename = "index.html"
 
+    # Setup ip address and port
     dest_hostname = parsed_url.hostname
     dest_ip_addr = socket.gethostbyname(dest_hostname)
     src_port = randint(49152, 65535)
     dest_port = 80
     src_ip_addr = get_my_ip(dest_ip_addr, dest_port)
 
-    # Handshake
+    # Build raw socket
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     
+    # Handshake
     connection = False
-
     while not connection and time.time() - start_time < 60:
         connection = rawSocket.handshake()
-
     if not connection:
         print("connection failed")
         sys.exit(1)
 
+    # Generat GET request and send
     request = generate_get_req(parsed_url)
-
     rawSocket.send(request)
+
+    # Receive data from server
     header, body = rawSocket.receive_all()
 
+    # Check data
     if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
         print("File error")
         return

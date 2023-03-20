@@ -61,6 +61,7 @@ def main():
     if not filename:
         filename = "index.html"
 
+    # Set up
     dest_hostname = parsed_url.hostname
     dest_ip_addr = socket.gethostbyname(dest_hostname)
     src_port = randint(49152, 65535)
