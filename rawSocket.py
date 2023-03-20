@@ -414,15 +414,13 @@ class RawSocket:
         tuple
             A tuple containing the HTTP header and the body of the received payload
         """
-        start_time = time.time()
         # Initialize the buffer for storing received packets
         buffer = None
         # Save the current acknowledgement sequence number as the starting sequence
         start_seq = self._ack_seq
 
         # Call the _receive_all() method to receive all packets and store them in the buffer
-        while time.time() - start_time <= timeout and buffer != None:
-            buffer = self._receive_all()
+        buffer = self._receive_all()
 
         if buffer == None:
             print("Error in downloading")
