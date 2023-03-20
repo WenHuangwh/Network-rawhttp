@@ -424,7 +424,7 @@ class RawSocket:
 
         if buffer == None:
             print("Error in downloading")
-            return
+            return None, None
 
         # Initialize a list for storing the received data
         received_data = []
