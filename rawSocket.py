@@ -420,10 +420,6 @@ class RawSocket:
         # Call the _receive_all() method to receive all packets and store them in the buffer
         buffer = self._receive_all()
 
-        if buffer == None:
-            print("Error in downloading")
-            return None, None
-
         # Initialize a list for storing the received data
         received_data = []
 
@@ -437,6 +433,9 @@ class RawSocket:
 
         # Combine the received data segments into a single payload
         total_payload = b''.join(received_data)
+
+        if len(total_payload) == 0:
+            return None, None
 
         # Separate the HTTP header and the body of the payload
         header, _, body = total_payload.partition(b'\r\n\r\n')
