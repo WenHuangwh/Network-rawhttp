@@ -528,7 +528,7 @@ class RawSocket:
                 self._ack_seq += payload_len
                 self._ack_seq %= 0x100000000
                 self._rwnd = max(1, buffer_limit - buffer_size)
-                self._adwind = socket.htons(self._rwnd)
+                # self._adwind = socket.htons(self._rwnd)
                 self._send_one(ACK, "") 
 
         # Finalize the connection by sending ACK and FIN_ACK packets
