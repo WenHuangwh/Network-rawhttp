@@ -721,7 +721,6 @@ class RawSocket:
             tcp_data += b'\x00'
 
         checksum_data = pseudo_header + tcp_header_bytes[:16] + tcp_header_bytes[18:] + tcp_data
-
         checksum = 0
         for i in range(0, len(checksum_data), 2):
             if i + 1 < len(checksum_data):
