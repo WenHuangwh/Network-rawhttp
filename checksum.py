@@ -1,24 +1,29 @@
-    
+import socket, sys, time
+import os
+from urllib.parse import urlparse
+from struct import *
+from random import randint
+import time
+from collections import namedtuple
+from functools import reduce
+import array
+
 class RawSocket:
 
     def __init__(self):
-        bytes_packet = , bytes_packet
-        self.verify_ipv4_checksum(bytes_packet)
-        self.verify_tcp_checksum(bytes_packet)
-
+        self.x = 1
 
     def verify_ipv4_checksum(self, byte_packet):
 
-        # Validate the IPv4 header and calculate the checksum
-        ip_header = byte_packet[:20]  # Extract the IP header from the packet
-        received_checksum = unpack('!H', ip_header[10:12])[0]  # Extract the received checksum from the IP header
-        ip_header = ip_header[:10] + b'\x00\x00' + ip_header[12:]  # Set the checksum field to 0 in the header
-
-        # Calculate the checksum using the checksum function and compare it to the received checksum
-        self.checksum(ip_header) == received_checksum
+        ip_header = byte_packet[:20]
+        checksum_in_header = (ip_header[10] << 8) + ip_header[11]
+        ip_header_with_zero_checksum = ip_header[:10] + b'\x00\x00' + ip_header[12:]
+        calculated_checksum = self.checksum(ip_header_with_zero_checksum)
+        
+        checksum_in_header == calculated_checksum
         print("IP: ")
         print(self.checksum(ip_header))
-        print(received_checksum)
+        print(checksum_in_header)
         return 
 
 
@@ -131,3 +136,50 @@ class RawSocket:
         tcp_header = pack('!HHLLBBH', tcp_src, tcp_dest, tcp_seq, tcp_ack_seq, tcp_offset_res, tcp_flags, tcp_window) + pack('H', tcp_check) + pack('!H', tcp_urg_ptr)
 
         return tcp_header
+
+
+    def unpack_ip_packet(self, packet):
+
+        # Unpack the IP header and extract relevant fields
+        IpHeader = namedtuple('IpHeader', ['version', 'header_length', 'ttl', 'protocol', 'src_address', 'dest_address'])
+
+        ip_header = unpack('!BBHHHBBH4s4s', packet[:20])
+        version = ip_header[0] >> 4
+        header_length = (ip_header[0] & 0xF) * 4
+        ttl = ip_header[5]
+        protocol = ip_header[6]
+        src_address = socket.inet_ntoa(ip_header[8])
+        dest_address = socket.inet_ntoa(ip_header[9])
+
+        # Return the IP header as a namedtuple
+        return IpHeader(version, header_length, ttl, protocol, src_address, dest_address)
+
+    def unpack_tcp_packet(self, packet):
+
+        # Unpack the TCP header and extract relevant fields
+        TcpHeader = namedtuple('TcpHeader', ['src_port', 'dest_port', 'seq', 'ack_seq', 'header_length', 'flags', 'window_size', 'checksum', 'urgent_pointer', 'payload', 'adwind'])
+
+        tcp_header = unpack('!HHLLBBHHH', packet[20:40])
+        src_port = tcp_header[0]
+        dest_port = tcp_header[1]
+        sequence_number = tcp_header[2]
+        acknowledgement_number = tcp_header[3]
+        header_length = (tcp_header[4] >> 4) * 4
+        flags = tcp_header[5]
+        window_size = tcp_header[6]
+        checksum = tcp_header[7]
+        urgent_pointer = tcp_header[8]
+        payload = packet[20 + header_length:]
+        adwind = socket.ntohs(tcp_header[6])
+
+        # Return the TCP header as a namedtuple
+        return TcpHeader(src_port, dest_port, sequence_number, acknowledgement_number, header_length, flags, window_size, checksum, urgent_pointer, payload, adwind)
+
+
+def main():
+    rawSocket = RawSocket()
+    bytes_packet = b'E\x00\x00,\xff\xa6\x00\x00\x80\x06d\x93\xcc,\xc0<\xc0\xa8\x89\x80\x00P\xe6\xf3\xceK\x8e.Nm\x0ef`\x12\xfa\xf0&\x02\x00\x00\x02\x04\x05\xb4'
+    rawSocket.verify_ipv4_checksum(bytes_packet)
+    rawSocket.verify_tcp_checksum(bytes_packet)
+
+main()
