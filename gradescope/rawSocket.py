@@ -337,10 +337,12 @@ class RawSocket:
         """
         # Verify the IP checksum of the received packet
         if not self.verify_ipv4_checksum(packet):
+            print("IP checksum invalid")
             return False
 
         # Verify the TCP checksum of the received packet
         if not self.verify_tcp_checksum(packet):
+            print("TCP checksum invalid")
             return False
 
         # Extract the IP and TCP headers from the packet
@@ -349,12 +351,10 @@ class RawSocket:
 
         # Check if the source and destination IP addresses in the packet match the expected values
         if ip_datagram.src_address != self._destIpAddr or ip_datagram.dest_address != self._srcIpAddr:
-            # print("Invalid ip address")
             return False
 
         # Check if the source and destination ports in the packet match the expected values
         if tcp_datagram.src_port != self._destPort or tcp_datagram.dest_port != self._srcPort:
-            # print("Invalid port")
             return False
 
         # All checks passed, return True
@@ -403,7 +403,7 @@ class RawSocket:
             return None
 
 
-    def receive_all(self):
+    def receive_all(self, timeout = 60):
         """
         Receives all incoming packets and combines them into a single payload.
         
@@ -433,6 +433,9 @@ class RawSocket:
 
         # Combine the received data segments into a single payload
         total_payload = b''.join(received_data)
+
+        if len(total_payload) == 0:
+            return None, None
 
         # Separate the HTTP header and the body of the payload
         header, _, body = total_payload.partition(b'\r\n\r\n')
@@ -491,7 +494,7 @@ class RawSocket:
                 if timeout_counter >= max_timeouts:
                     print("Time out, close connection")
                     self.close()
-                    return buffer
+                    return None
                 continue
             else:
                 timeout_counter = 0
@@ -629,9 +632,7 @@ class RawSocket:
             # send sefl.seq, self.ack = server.seq + 1
             self._ack_seq = tcp_datagram.seq + 1
             self._send_one(ACK, "")
-            print("Connected")
             return True
-        print("Connect failed")
         # Return the result of the handshake
         return False
 

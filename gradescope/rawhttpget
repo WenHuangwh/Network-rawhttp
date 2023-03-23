@@ -45,7 +45,11 @@ def generate_get_req(parsed_url):
     str
         The generated HTTP GET request.
     """
-    return f"GET {parsed_url.path} HTTP/1.1\r\nHost: {parsed_url.hostname}\r\nConnection: Close\r\n\r\n"
+    path = parsed_url.path
+    hostname = parsed_url.hostname
+    if path == "":
+        path = "/"
+    return f"GET {path} HTTP/1.1\r\nHost: {hostname}\r\nConnection: Close\r\n\r\n"
 
 def main():
     """
@@ -61,39 +65,47 @@ def main():
     if not filename:
         filename = "index.html"
 
-    # Set up
+    # Setup ip address and port
     dest_hostname = parsed_url.hostname
     dest_ip_addr = socket.gethostbyname(dest_hostname)
     src_port = randint(49152, 65535)
     dest_port = 80
     src_ip_addr = get_my_ip(dest_ip_addr, dest_port)
 
-    # Handshake
+    # Build raw socket
     rawSocket = RawSocket(src_ip_addr, dest_ip_addr, src_port, dest_port)
     
+    # Handshake
     connection = False
-
     while not connection and time.time() - start_time < 60:
+        print("Connecting")
         connection = rawSocket.handshake()
 
-    if not connection:
-        print("connection failed")
-        sys.exit(1)
+    if connection:
+        print("Connected")
+    else:
+        print("Connection failed")
+        return
 
+    # Generat GET request and send
     request = generate_get_req(parsed_url)
-
+    print(f"Sending request: {request}")
     rawSocket.send(request)
+
+    # Receive data from server
+    print("Receiving data")
     header, body = rawSocket.receive_all()
 
-    if not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
-        print("File error")
+    # Check data
+    if header == None or not b"HTTP/1.1 200" in header and not b"HTTP/1.0 200" in header:
+        print("Please try again")
         return
 
     # Save the payload to a file
     with open(filename, "wb") as log_file:
         log_file.write(body)
 
-    print("Payload saved to received_payload.log")
+    print(f"Payload saved to {filename}")
     print(f"Time: {time.time() - start_time}")
 
 if __name__ == "__main__":
